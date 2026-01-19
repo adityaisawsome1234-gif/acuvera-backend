@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: acuvera_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-acuvera_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-acuvera_password}
+      POSTGRES_DB: ${POSTGRES_DB:-acuvera_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-acuvera_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - acuvera_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: acuvera_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - acuvera_network
+
+  web:
+    build: .
+    container_name: acuvera_backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    volumes:
+      - ./uploads:/app/uploads
+      - ./.env:/app/.env:ro
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-acuvera_user}:${POSTGRES_PASSWORD:-acuvera_password}@db:5432/${POSTGRES_DB:-acuvera_db}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - acuvera_network
+    restart: unless-stopped
+
+  # Celery worker (optional - currently using threading, uncomment when Celery is implemented)
+  # celery:
+  #   build: .
+  #   container_name: acuvera_celery
+  #   command: celery -A app.jobs.analysis_job worker --loglevel=info
+  #   volumes:
+  #     - ./uploads:/app/uploads
+  #     - ./.env:/app/.env:ro
+  #   environment:
+  #     - DATABASE_URL=postgresql://${POSTGRES_USER:-acuvera_user}:${POSTGRES_PASSWORD:-acuvera_password}@db:5432/${POSTGRES_DB:-acuvera_db}
+  #     - REDIS_URL=redis://redis:6379/0
+  #   depends_on:
+  #     - db
+  #     - redis
+  #     - web
+  #   networks:
+  #     - acuvera_network
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  acuvera_network:
+    driver: bridge
