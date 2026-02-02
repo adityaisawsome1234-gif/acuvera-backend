@@ -1,0 +1,136 @@
+# Render Deployment Configuration for Acuvera Enterprise
+# This file defines the services to deploy on Render
+
+services:
+  # Backend API Service
+  - type: web
+    name: acuvera-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # Render automatically sets PORT env var - must listen on 0.0.0.0:$PORT
+    # Use startCommand to override Dockerfile CMD and ensure PORT is used
+    startCommand: sh -c "cd /app/apps/api && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 4"
+    workingDir: /app/apps/api
+    envVars:
+      # Database (will be auto-populated by Render PostgreSQL attachment)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: acuvera-db
+          property: connectionString
+      
+      # Redis (REQUIRED: Create Redis service in Render dashboard, then set REDIS_URL manually)
+      # After creating Redis service named "acuvera-redis", Render will auto-populate this
+      - key: REDIS_URL
+        sync: false  # Set manually after creating Redis service
+      
+      # Application Settings
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: CORS_ORIGINS
+        value: https://acuvera.co,https://www.acuvera.co
+      - key: FRONTEND_URL
+        value: https://acuvera.co
+      
+      # JWT Security (REQUIRED: Set in Render dashboard)
+      - key: SECRET_KEY
+        generateValue: true
+        sync: false
+      
+      # File Storage
+      - key: STORAGE_TYPE
+        value: local
+      - key: UPLOAD_DIR
+        value: /app/uploads
+      - key: MAX_FILE_SIZE_MB
+        value: "25"
+      
+      # AI Provider (REQUIRED: Set in Render dashboard)
+      - key: AI_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: AI_ALLOW_STUB
+        value: "false"
+      
+      # Email Configuration (REQUIRED: Set in Render dashboard)
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
+      
+      # Monitoring (Optional)
+      - key: SENTRY_DSN
+        sync: false
+    
+    # Health check
+    healthCheckPath: /health
+    
+    # Build settings
+    buildCommand: ""
+    startCommand: ""
+
+  # Background Worker Service
+  - type: worker
+    name: acuvera-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: rq worker --url $REDIS_URL
+    workingDir: /app/apps/api
+    envVars:
+      # Database (same as API)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: acuvera-db
+          property: connectionString
+      
+      # Redis (REQUIRED: Set same REDIS_URL as API service)
+      - key: REDIS_URL
+        sync: false  # Set manually after creating Redis service
+      
+      # Application Settings
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      
+      # File Storage (same as API)
+      - key: STORAGE_TYPE
+        value: local
+      - key: UPLOAD_DIR
+        value: /app/uploads
+      
+      # AI Provider (same as API)
+      - key: AI_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: AI_ALLOW_STUB
+        value: "false"
+      
+      # Monitoring (Optional)
+      - key: SENTRY_DSN
+        sync: false
+
+# Database Service
+databases:
+  - name: acuvera-db
+    databaseName: acuvera_db
+    user: acuvera_user
+    plan: starter  # Change to 'standard' or 'pro' for production
+
+# Redis Service (Note: Redis must be created manually in Render dashboard)
+# After creating Redis, update REDIS_URL references above to use the service name

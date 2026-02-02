@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11
 
 # Set working directory
 WORKDIR /app
@@ -7,13 +7,15 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app/apps/api
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# Using full Python image which may already have gcc, only need postgresql-client
+RUN apt-get update && \
+    apt-get install -y \
+    postgresql-client && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
@@ -23,15 +25,20 @@ RUN pip install --upgrade pip && \
 # Copy application code
 COPY . .
 
+# Use API app directory as working dir
+WORKDIR /app/apps/api
+
 # Create uploads directory
 RUN mkdir -p /app/uploads
 
-# Expose port
+# Expose port (Render will set PORT env var)
 EXPOSE 8000
 
-# Health check
+# Health check (use PORT env var)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+    CMD python -c "import os, requests; port=os.getenv('PORT', '8000'); requests.get(f'http://localhost:{port}/health')" || exit 1
 
 # Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# Render will override this with startCommand from render.yaml
+# Default CMD for local development
+CMD ["sh", "-c", "cd /app/apps/api && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 4"]
