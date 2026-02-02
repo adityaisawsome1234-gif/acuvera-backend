@@ -42,6 +42,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import os, requests; port=os.getenv('PORT', '8000'); requests.get(f'http://localhost:{port}/health')" || exit 1
 
 # Run the application
-# Render will override this with startCommand from render.yaml
-# Default CMD for local development
-CMD ["sh", "-c", "cd /app/apps/api && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 4"]
+# PYTHONPATH=/app/apps/api means 'app' package is at /app/apps/api/app/
+# So 'app.main:app' resolves to /app/apps/api/app/main.py
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 4"]
