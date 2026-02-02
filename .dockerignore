@@ -1,3 +1,9 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
 __pycache__
 *.pyc
 *.pyo
@@ -8,23 +14,61 @@ __pycache__
 *.egg-info
 dist
 build
+.venv
+venv
+env
+ENV
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Environment
 .env
 .env.local
-.venv
-venv/
-ENV/
-env/
-.git
-.gitignore
-README.md
+.env.*.local
+
+# Documentation
 *.md
+!README.md
+docs/
+
+# Tests
+tests/
+test/
+*.test.py
+pytest.ini
 .pytest_cache
+coverage
 .coverage
-htmlcov
-.mypy_cache
-.dockerignore
-Dockerfile
-docker-compose.yml
-.dockerignore
-uploads/*
-!uploads/.gitkeep
+htmlcov/
+
+# Frontend (not needed for backend Docker image)
+apps/web/
+apps/desktop/
+acuvera-frontend/
+node_modules/
+.next/
+.nuxt/
+dist/
+build/
+
+# Other
+.DS_Store
+*.log
+logs/
+uploads_test/
+sample.pdf
+
+# Deployment configs (not needed in image)
+docker-compose*.yml
+fly.toml
+nginx.conf.example
+scripts/
+*.sh
+
+# Render specific
+render.yaml

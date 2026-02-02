@@ -20,10 +20,14 @@ RUN apt-get update && \
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+    pip install -r requirements.txt && \
+    pip install --no-cache-dir email-validator==2.1.0 && \
+    python -c "import email_validator; print(f'email-validator installed: {email_validator.__version__}')"
 
-# Copy application code
-COPY . .
+# Copy application code (exclude old app/ directory, use apps/api/app/)
+# Copy only what we need for the API
+COPY apps/api/ /app/apps/api/
+COPY requirements.txt /app/
 
 # Use API app directory as working dir
 WORKDIR /app/apps/api
