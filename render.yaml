@@ -10,7 +10,7 @@ services:
     dockerContext: .
     # Render automatically sets PORT env var - must listen on 0.0.0.0:$PORT
     # Use startCommand to override Dockerfile CMD and ensure PORT is used
-    startCommand: sh -c "python -c 'import email_validator; print(\"email-validator OK\")' && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 4"
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     workingDir: /app/apps/api
     envVars:
       # Database (will be auto-populated by Render PostgreSQL attachment)

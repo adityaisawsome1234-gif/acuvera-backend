@@ -44,4 +44,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Run the application
 # PYTHONPATH=/app/apps/api means 'app' package is at /app/apps/api/app/
 # So 'app.main:app' resolves to /app/apps/api/app/main.py
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 4"]
+# Default CMD - Render will override with startCommand
+# Use PORT env var (Render sets this to 10000 by default)
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
