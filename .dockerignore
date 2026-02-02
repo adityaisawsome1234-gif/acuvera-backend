@@ -56,6 +56,9 @@ node_modules/
 dist/
 build/
 
+# Old app structure (use apps/api/app/ instead)
+# Keep app/ for now in case there are dependencies, but PYTHONPATH points to apps/api
+
 # Other
 .DS_Store
 *.log
