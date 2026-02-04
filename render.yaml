@@ -9,8 +9,8 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     # Render automatically sets PORT env var - must listen on 0.0.0.0:$PORT
-    # Use startCommand to override Dockerfile CMD and ensure PORT is used
-    startCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"
+    # Use --app-dir to guarantee Python can resolve the app package
+    startCommand: sh -c "uvicorn app.main:app --app-dir /app/apps/api --host 0.0.0.0 --port ${PORT:-10000}"
     workingDir: /app/apps/api
     envVars:
       # Database (will be auto-populated by Render PostgreSQL attachment)
