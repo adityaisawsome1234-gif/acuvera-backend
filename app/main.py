@@ -13,17 +13,18 @@ from app.api.v1.mobile import router as mobile_router
 from app.schemas.common import ErrorResponse
 import os
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
-
-# Create uploads directory
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-
 app = FastAPI(
     title="Acuvera API",
     description="AI-powered medical billing intelligence platform",
     version="1.0.0"
 )
+
+
+@app.on_event("startup")
+def on_startup():
+    """Create database tables and uploads directory on server start (not at import time)."""
+    Base.metadata.create_all(bind=engine)
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
 # CORS middleware
 cors_origins = settings.CORS_ORIGINS.split(",") if settings.CORS_ORIGINS != "*" else ["*"]

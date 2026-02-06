@@ -25,9 +25,6 @@ RUN pip install --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Verify the app module is importable (fail fast during build if not)
-RUN python -c "from app.main import app; print('SUCCESS: app.main imported correctly')"
-
 # Create uploads directory
 RUN mkdir -p /app/uploads
 
