@@ -9,8 +9,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     # Render sets PORT env var - must listen on 0.0.0.0:$PORT
-    # Direct uvicorn call (no reload) from WORKDIR /app/apps/api
-    dockerCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     envVars:
       # Database (will be auto-populated by Render PostgreSQL attachment)
       - key: DATABASE_URL
