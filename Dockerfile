@@ -29,7 +29,7 @@ RUN pip install --upgrade pip && \
 COPY . .
 
 # Use API app directory as working dir
-WORKDIR /app/apps/api
+WORKDIR /app/apps/api/app
 
 # Create uploads directory
 RUN mkdir -p /app/uploads
@@ -42,7 +42,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import os, requests; port=os.getenv('PORT', '8000'); requests.get(f'http://localhost:{port}/health')" || exit 1
 
 # Run the application
-# Use app-dir pointing directly to apps/api/app to avoid package import issues
-# Default CMD - Render will override with startCommand
-# Use PORT env var (Render sets this to 10000 by default)
+# Default CMD for Docker runtime
 CMD ["sh", "-c", "uvicorn main:app --app-dir /app/apps/api/app --host 0.0.0.0 --port ${PORT:-10000}"]
