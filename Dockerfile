@@ -28,19 +28,19 @@ RUN pip install --upgrade pip && \
 # Copy everything - PYTHONPATH=/app/apps/api ensures 'app' resolves to apps/api/app/
 COPY . .
 
-# Use API app directory as working dir
-WORKDIR /app/apps/api/app
+# Use API directory as working dir (so 'app' package is importable)
+WORKDIR /app/apps/api
 
 # Create uploads directory
 RUN mkdir -p /app/uploads
 
-# Expose port (Render will set PORT env var)
-EXPOSE 8000
+# Expose port (Render will set PORT env var, default 10000)
+EXPOSE 10000
 
-# Health check (use PORT env var)
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import os, requests; port=os.getenv('PORT', '8000'); requests.get(f'http://localhost:{port}/health')" || exit 1
+    CMD python -c "import os, urllib.request; port=os.getenv('PORT', '10000'); urllib.request.urlopen(f'http://localhost:{port}/health')" || exit 1
 
-# Run the application
-# Default CMD for Docker runtime
-CMD ["sh", "-c", "uvicorn main:app --app-dir /app/apps/api/app --host 0.0.0.0 --port ${PORT:-10000}"]
+# Run the application using run.py (bulletproof module resolution)
+# run.py reads PORT from env var (default 10000)
+CMD ["python", "run.py"]
