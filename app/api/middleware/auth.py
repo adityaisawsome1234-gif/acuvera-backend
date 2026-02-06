@@ -41,6 +41,7 @@ async def get_current_active_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
     """Get current active user"""
+    print(f"DEBUG: Current active user: {current_user.email} (Role: {current_user.role})", flush=True)
     if not current_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -63,7 +64,10 @@ def require_role(*allowed_roles: UserRole):
 
 def require_patient_or_admin(current_user: User = Depends(get_current_active_user)) -> User:
     """Allow PATIENT or ADMIN"""
-    if current_user.role not in [UserRole.PATIENT, UserRole.ADMIN]:
+    print(f"DEBUG: User {current_user.email} has role {current_user.role} (type: {type(current_user.role)})", flush=True)
+    # Check both enum value and string value to be safe
+    role_val = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role_val not in ["PATIENT", "ADMIN", UserRole.PATIENT, UserRole.ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied. Patient or Admin access required."
@@ -73,7 +77,8 @@ def require_patient_or_admin(current_user: User = Depends(get_current_active_use
 
 def require_provider_or_admin(current_user: User = Depends(get_current_active_user)) -> User:
     """Allow PROVIDER or ADMIN"""
-    if current_user.role not in [UserRole.PROVIDER, UserRole.ADMIN]:
+    role_val = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role_val not in ["PROVIDER", "ADMIN", UserRole.PROVIDER, UserRole.ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied. Provider or Admin access required."

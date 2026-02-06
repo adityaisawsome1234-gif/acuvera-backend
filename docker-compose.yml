@@ -3,15 +3,14 @@ version: '3.8'
 services:
   db:
     image: postgres:15-alpine
-    container_name: acuvera_db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-acuvera_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-acuvera_password}
-      POSTGRES_DB: ${POSTGRES_DB:-acuvera_db}
+       POSTGRES_DB: ${POSTGRES_DB:-acuvera_db}
+       POSTGRES_USER: ${POSTGRES_USER:-acuvera_user}
+       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-acuvera_password}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_enterprise:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-acuvera_user}"]
       interval: 10s
@@ -22,11 +21,10 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: acuvera_redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
-      - redis_data:/data
+      - redis_data_enterprise:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -35,18 +33,22 @@ services:
     networks:
       - acuvera_network
 
-  web:
+  api:
     build: .
-    container_name: acuvera_backend
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    working_dir: /app/apps/api
+    env_file:
+      - .env
     volumes:
       - ./uploads:/app/uploads
       - ./.env:/app/.env:ro
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-acuvera_user}:${POSTGRES_PASSWORD:-acuvera_password}@db:5432/${POSTGRES_DB:-acuvera_db}
       - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app/apps/api
+      - UPLOAD_DIR=/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -56,28 +58,39 @@ services:
       - acuvera_network
     restart: unless-stopped
 
-  # Celery worker (optional - currently using threading, uncomment when Celery is implemented)
-  # celery:
-  #   build: .
-  #   container_name: acuvera_celery
-  #   command: celery -A app.jobs.analysis_job worker --loglevel=info
-  #   volumes:
-  #     - ./uploads:/app/uploads
-  #     - ./.env:/app/.env:ro
-  #   environment:
-  #     - DATABASE_URL=postgresql://${POSTGRES_USER:-acuvera_user}:${POSTGRES_PASSWORD:-acuvera_password}@db:5432/${POSTGRES_DB:-acuvera_db}
-  #     - REDIS_URL=redis://redis:6379/0
-  #   depends_on:
-  #     - db
-  #     - redis
-  #     - web
-  #   networks:
-  #     - acuvera_network
-  #   restart: unless-stopped
+  worker:
+    build: .
+    command: rq worker --url redis://redis:6379/0
+    working_dir: /app/apps/api
+    env_file:
+      - .env
+    volumes:
+      - ./uploads:/app/uploads
+      - ./.env:/app/.env:ro
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-acuvera_user}:${POSTGRES_PASSWORD:-acuvera_password}@db:5432/${POSTGRES_DB:-acuvera_db}
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app/apps/api
+      - UPLOAD_DIR=/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "rq", "info", "-u", "redis://redis:6379/0"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - acuvera_network
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
-  redis_data:
+  postgres_data_enterprise:
+  redis_data_enterprise:
 
 networks:
   acuvera_network:

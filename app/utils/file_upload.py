@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 from fastapi import UploadFile, HTTPException, status
 from app.core.config import settings
 from PIL import Image
+import PyPDF2
 
 
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png"}
@@ -97,4 +98,40 @@ def get_file_url(file_path: str) -> str:
     else:
         # Local storage - return relative path
         return f"/files/{Path(file_path).name}"
+
+
+def extract_text_from_file(file_path: str) -> str:
+    """Extract text from PDF or image file"""
+    path = Path(file_path)
+    
+    if not path.exists():
+        raise ValueError(f"File not found: {file_path}")
+    
+    file_ext = path.suffix.lower()
+    
+    if file_ext == ".pdf":
+        # Extract text from PDF
+        try:
+            text_parts = []
+            with open(file_path, "rb") as f:
+                pdf_reader = PyPDF2.PdfReader(f)
+                for page in pdf_reader.pages:
+                    text = page.extract_text()
+                    if text:
+                        text_parts.append(text)
+            return "\n".join(text_parts)
+        except Exception as e:
+            raise ValueError(f"Failed to extract text from PDF: {str(e)}")
+    
+    elif file_ext in [".jpg", ".jpeg", ".png"]:
+        # For images, we would need OCR (Tesseract, AWS Textract, etc.)
+        # For now, return a placeholder
+        # In production, integrate OCR service here
+        raise ValueError(
+            "Image OCR not yet implemented. Please upload PDF files for AI analysis. "
+            "Or set DEMO_MODE=true to use demo analysis."
+        )
+    
+    else:
+        raise ValueError(f"Unsupported file type for text extraction: {file_ext}")
 

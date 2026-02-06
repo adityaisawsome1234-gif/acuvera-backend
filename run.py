@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 """Run the Acuvera backend server"""
-import uvicorn
 import os
-from app.core.config import settings
+import sys
+from pathlib import Path
+
+import uvicorn
+
+root_dir = Path(__file__).resolve().parent
+sys.path.insert(0, str(root_dir / "apps" / "api"))
+
+from app.core.config import settings  # noqa: E402
 
 if __name__ == "__main__":
     # Production: use workers, Development: use reload

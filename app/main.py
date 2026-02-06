@@ -8,6 +8,8 @@ from app.api.v1.auth import auth_router
 from app.api.v1.bills import bills_router
 from app.api.v1.provider import provider_router
 from app.api.v1.admin import admin_router
+from app.api.v1.ai import ai_router
+from app.api.v1.mobile import router as mobile_router
 from app.schemas.common import ErrorResponse
 import os
 
@@ -41,6 +43,8 @@ app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(bills_router, prefix="/api/v1/bills", tags=["bills"])
 app.include_router(provider_router, prefix="/api/v1/provider", tags=["provider"])
 app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
+app.include_router(ai_router, prefix="/api/v1/ai", tags=["ai"])
+app.include_router(mobile_router, prefix="/api/v1/mobile", tags=["mobile"])
 
 
 @app.exception_handler(HTTPException)
