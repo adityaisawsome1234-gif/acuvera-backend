@@ -41,6 +41,6 @@ EXPOSE 10000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import os, urllib.request; port=os.getenv('PORT', '10000'); urllib.request.urlopen(f'http://localhost:{port}/health')" || exit 1
 
-# Run the application using run.py (bulletproof module resolution)
-# run.py reads PORT from env var (default 10000)
-CMD ["python", "run.py"]
+# Run the application directly with uvicorn (no reload in production)
+# Render sets PORT env var; default 10000
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
