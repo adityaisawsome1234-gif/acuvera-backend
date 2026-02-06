@@ -9,8 +9,9 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     # Render automatically sets PORT env var - must listen on 0.0.0.0:$PORT
-    # Explicitly set PYTHONPATH and app dir to avoid ModuleNotFoundError
-    startCommand: sh -c "export PYTHONPATH=/app/apps/api && python -m uvicorn app.main:app --app-dir /app/apps/api --host 0.0.0.0 --port ${PORT:-10000}"
+    # Use app-dir to avoid relying on PYTHONPATH or package imports
+    # This runs apps/api/app/main.py as module "main"
+    startCommand: sh -c "uvicorn main:app --app-dir /app/apps/api/app --host 0.0.0.0 --port ${PORT:-10000}"
     workingDir: /app/apps/api
     envVars:
       # Database (will be auto-populated by Render PostgreSQL attachment)
@@ -33,8 +34,6 @@ services:
         value: https://acuvera.co,https://www.acuvera.co
       - key: FRONTEND_URL
         value: https://acuvera.co
-      - key: PYTHONPATH
-        value: /app/apps/api
       
       # JWT Security (REQUIRED: Set in Render dashboard)
       - key: SECRET_KEY
