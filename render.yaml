@@ -78,9 +78,7 @@ services:
     # Health check
     healthCheckPath: /health
     
-    # Build settings
-    buildCommand: ""
-    startCommand: ""
+    # Build settings (leave unset for Docker runtime)
 
   # Background Worker Service
   - type: worker
