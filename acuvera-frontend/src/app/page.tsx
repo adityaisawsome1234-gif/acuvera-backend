@@ -8,6 +8,7 @@ import {
   ShieldAlert,
   Upload,
 } from "lucide-react";
+import { Protected } from "@/components/layout/protected";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { DenialRiskChart } from "@/components/dashboard/DenialRiskChart";
@@ -19,6 +20,7 @@ import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   return (
+    <Protected>
     <DashboardLayout
       title="Dashboard"
       subtitle="Clarity in every medical bill"
@@ -74,5 +76,6 @@ export default function DashboardPage() {
 
       <SavingsTrendChart />
     </DashboardLayout>
+    </Protected>
   );
 }
