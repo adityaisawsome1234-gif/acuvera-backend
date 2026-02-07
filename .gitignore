@@ -12,8 +12,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -31,6 +31,15 @@ wheels/
 .idea/
 *.swp
 *.swo
+
+# Node
+node_modules/
+.next/
+npm-debug.log*
+
+# Tauri
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/.tauri/
 
 # Uploads
 uploads/*
