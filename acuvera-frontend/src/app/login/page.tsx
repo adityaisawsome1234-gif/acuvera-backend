@@ -3,12 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Shield } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { setToken, setUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
 export default function LoginPage() {
@@ -19,10 +19,6 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const safePassword = password.slice(0, 72);
-    if (password.length > 72) {
-      toast.error("Password was longer than 72 characters and was truncated.");
-    }
     setLoading(true);
     try {
       const res = await apiFetch<{
@@ -32,7 +28,7 @@ export default function LoginPage() {
         "/auth/login",
         {
           method: "POST",
-          body: JSON.stringify({ email, password: safePassword }),
+          body: JSON.stringify({ email, password: password.slice(0, 72) }),
         },
         { suppressAuthRedirect: true }
       );
@@ -42,56 +38,83 @@ export default function LoginPage() {
       toast.success("Welcome back!");
       router.push("/");
     } catch (err: any) {
-      toast.error(err?.message ?? "Login failed");
+      toast.error(err?.message ?? "Login failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen px-6 py-16">
-      <div className="mx-auto max-w-md">
-        <Card>
-          <CardHeader>
-            <CardTitle>Sign in to Acuvera</CardTitle>
-            <CardDescription>Access your dashboard and billing insights.</CardDescription>
-          </CardHeader>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-[400px]">
+        {/* Logo */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
+            <Shield size={24} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Welcome back
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sign in to your Acuvera account
+          </p>
+        </div>
+
+        {/* Form */}
+        <div className="rounded-2xl border border-border bg-card p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label className="text-[13px] font-medium text-foreground">
+                Email address
+              </Label>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
                 required
+                autoFocus
               />
             </div>
             <div className="space-y-2">
-              <Label>Password</Label>
+              <Label className="text-[13px] font-medium text-foreground">
+                Password
+              </Label>
               <Input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value.slice(0, 72))}
-                placeholder="••••••••"
-                maxLength={72}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
                 required
               />
-              <p className="text-xs text-slate-400">
-                {password.length}/72 characters
-              </p>
             </div>
-            <Button type="submit" size="lg" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Signing in...
+                </span>
+              ) : (
+                "Sign in"
+              )}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-slate-400">
-            New here?{" "}
-            <Link href="/register" className="text-primary hover:underline">
-              Create an account
-            </Link>
-          </p>
-        </Card>
+        </div>
+
+        <p className="mt-6 text-center text-[13px] text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/register"
+            className="font-medium text-primary hover:underline"
+          >
+            Create account
+          </Link>
+        </p>
       </div>
     </div>
   );

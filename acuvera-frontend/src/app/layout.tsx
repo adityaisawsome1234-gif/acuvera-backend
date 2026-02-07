@@ -6,11 +6,13 @@ import "./globals.css";
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Acuvera | Clarity in every medical bill",
-  description: "AI-powered medical billing intelligence for patients and providers.",
+  title: "Acuvera | AI-Powered Medical Billing Intelligence",
+  description:
+    "Detect billing errors, prevent denials, and protect revenue with AI-powered medical bill analysis.",
 };
 
 export default function RootLayout({
@@ -19,10 +21,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body className={`${inter.variable} antialiased`}>
         {children}
-        <Toaster richColors position="top-right" />
+        <Toaster
+          richColors
+          position="top-right"
+          toastOptions={{
+            style: {
+              borderRadius: "12px",
+              fontSize: "13px",
+            },
+          }}
+        />
       </body>
     </html>
   );

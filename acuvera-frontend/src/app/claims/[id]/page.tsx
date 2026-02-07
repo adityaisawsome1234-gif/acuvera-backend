@@ -3,148 +3,104 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Flag, FileDown, CheckCircle, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle,
+  FileDown,
+  Loader2,
+  AlertTriangle,
+  AlertCircle,
+  Info,
+} from "lucide-react";
 import { Protected } from "@/components/layout/protected";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { ClaimDetail } from "@/components/claims/ClaimDetail";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/api";
-import { claims, Claim } from "@/lib/mockData";
-import { formatCurrency } from "@/lib/utils";
+import { BillDetail, Finding, StandardResponse } from "@/lib/types";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
-type ApiBill = {
-  id: number;
-  file_name: string;
-  status: string;
-  total_amount?: number;
-  uploaded_at?: string;
-  analyzed_at?: string;
-  line_items?: Array<{
-    id: number;
-    description: string;
-    code?: string;
-    quantity: number;
-    unit_price: number;
-    total_price: number;
-  }>;
-  findings?: Array<{
-    id: number;
-    type: string;
-    severity: string;
-    confidence: number;
-    estimated_savings: number;
-    explanation: string;
-    recommended_action: string;
-  }>;
-};
-
-function mapSeverity(s: string): "High" | "Medium" | "Low" {
-  if (s === "CRITICAL" || s === "HIGH") return "High";
-  if (s === "MEDIUM") return "Medium";
-  return "Low";
+function severityBadge(severity: string) {
+  switch (severity) {
+    case "CRITICAL":
+    case "HIGH":
+      return (
+        <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive">
+          High
+        </span>
+      );
+    case "MEDIUM":
+      return (
+        <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-[11px] font-semibold text-warning">
+          Medium
+        </span>
+      );
+    default:
+      return (
+        <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-[11px] font-semibold text-success">
+          Low
+        </span>
+      );
+  }
 }
 
-function apiBillToClaim(bill: ApiBill): Claim {
-  const riskLevel: "High" | "Medium" | "Low" = bill.findings?.some(
-    (f) => f.severity === "CRITICAL" || f.severity === "HIGH"
-  )
-    ? "High"
-    : bill.findings?.some((f) => f.severity === "MEDIUM")
-      ? "Medium"
-      : "Low";
-
-  const totalSavings =
-    bill.findings?.reduce((sum, f) => sum + f.estimated_savings, 0) ?? 0;
-
-  return {
-    id: String(bill.id),
-    claimNumber: `BILL-${bill.id}`,
-    patientName: "Patient",
-    provider: "Provider",
-    dateSubmitted: bill.uploaded_at ?? new Date().toISOString(),
-    submissionDate: bill.uploaded_at ?? new Date().toISOString(),
-    amount: bill.total_amount ?? 0,
-    totalAmount: bill.total_amount ?? 0,
-    status: bill.status === "COMPLETED"
-      ? "Reviewed"
-      : bill.status === "FAILED"
-        ? "Needs Action"
-        : "Pending",
-    riskLevel,
-    errorsFound: bill.findings?.length ?? 0,
-    errorCount: bill.findings?.length ?? 0,
-    estimatedSavings: totalSavings,
-    category: "Medical Bill",
-    patientId: `PAT-${bill.id}`,
-    payer: "Insurance Provider",
-    procedureCode: bill.line_items?.[0]?.code ?? "N/A",
-    issues: (bill.findings ?? []).map((f) => ({
-      id: String(f.id),
-      errorType: f.type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-      severity: mapSeverity(f.severity),
-      confidenceScore: f.confidence,
-      estimatedSavings: f.estimated_savings,
-      explanation: f.explanation,
-      recommendedAction: f.recommended_action,
-    })),
-  };
+function severityIcon(severity: string) {
+  switch (severity) {
+    case "CRITICAL":
+    case "HIGH":
+      return <AlertTriangle size={16} className="text-destructive" />;
+    case "MEDIUM":
+      return <AlertCircle size={16} className="text-warning" />;
+    default:
+      return <Info size={16} className="text-success" />;
+  }
 }
 
 export default function ClaimDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const [claim, setClaim] = useState<Claim | null>(null);
+  const [bill, setBill] = useState<BillDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
 
   useEffect(() => {
-    async function loadClaim() {
-      // Try API first (numeric IDs are real bills)
-      const isNumeric = /^\d+$/.test(id);
-      if (isNumeric) {
-        try {
-          const res = await apiFetch<{ success: boolean; data: ApiBill }>(
-            `/bills/${id}`
-          );
-          const converted = apiBillToClaim(res.data);
-          setClaim(converted);
-          setLoading(false);
-
-          // If still processing, poll every 5 seconds
-          if (res.data.status === "PROCESSING" || res.data.status === "PENDING") {
-            setPolling(true);
-          } else {
-            setPolling(false);
-          }
-          return;
-        } catch {
-          // Fall through to mock data
+    async function loadBill() {
+      try {
+        const res = await apiFetch<StandardResponse<BillDetail>>(
+          `/bills/${id}`
+        );
+        setBill(res.data);
+        setLoading(false);
+        if (
+          res.data.status === "PROCESSING" ||
+          res.data.status === "PENDING"
+        ) {
+          setPolling(true);
+        } else {
+          setPolling(false);
         }
+      } catch {
+        setBill(null);
+        setLoading(false);
       }
-
-      // Fall back to mock data
-      const mockClaim = claims.find((item) => item.id === id);
-      setClaim(mockClaim ?? null);
-      setLoading(false);
     }
-
-    loadClaim();
+    loadBill();
   }, [id]);
 
-  // Poll for analysis completion
+  // Poll for completion
   useEffect(() => {
     if (!polling) return;
     const interval = setInterval(async () => {
       try {
-        const res = await apiFetch<{ success: boolean; data: ApiBill }>(
+        const res = await apiFetch<StandardResponse<BillDetail>>(
           `/bills/${id}`
         );
-        const converted = apiBillToClaim(res.data);
-        setClaim(converted);
-        if (res.data.status !== "PROCESSING" && res.data.status !== "PENDING") {
+        setBill(res.data);
+        if (
+          res.data.status !== "PROCESSING" &&
+          res.data.status !== "PENDING"
+        ) {
           setPolling(false);
         }
       } catch {
@@ -154,57 +110,257 @@ export default function ClaimDetailPage() {
     return () => clearInterval(interval);
   }, [polling, id]);
 
+  const findings = bill?.findings ?? [];
+  const totalSavings = findings.reduce(
+    (s, f) => s + (f.estimated_savings ?? 0),
+    0
+  );
+
   return (
     <Protected>
       <DashboardLayout
-        title="Claim Detail"
-        subtitle={claim ? `Review AI findings for ${claim.id}` : "Loading..."}
+        title={bill?.file_name ?? "Bill Details"}
+        subtitle={
+          bill?.uploaded_at
+            ? `Uploaded ${formatDate(bill.uploaded_at)}`
+            : "Loading..."
+        }
         actions={
-          <>
+          <div className="flex items-center gap-2">
             <Button variant="ghost" asChild>
               <Link href="/claims">
-                <ArrowLeft size={16} /> Back to Claims
+                <ArrowLeft size={15} /> Back
               </Link>
             </Button>
-            <Button variant="outline">
-              <Flag size={16} /> Flag for Follow-up
-            </Button>
-            <Button variant="outline">
-              <FileDown size={16} /> Export Notes
-            </Button>
-            <Button>
-              <CheckCircle size={16} /> Mark as Reviewed
-            </Button>
-          </>
+            {bill?.status === "COMPLETED" && (
+              <Button variant="outline" className="gap-1.5">
+                <FileDown size={14} /> Export
+              </Button>
+            )}
+          </div>
         }
       >
         {loading ? (
           <div className="space-y-4">
-            <Skeleton className="h-48" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="h-32 animate-pulse rounded-xl border border-border bg-card"
+              />
+            ))}
           </div>
         ) : polling ? (
-          <Card className="flex flex-col items-center justify-center py-16 text-center">
-            <Loader2 size={48} className="mb-4 animate-spin text-primary" />
-            <h3 className="text-lg font-semibold text-white">AI Analysis in Progress</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Our AI is analyzing your medical bill for errors and savings opportunities.
-              <br />
-              This usually takes 10-30 seconds. This page will update automatically.
+          <Card className="flex flex-col items-center py-20 text-center">
+            <Loader2
+              size={40}
+              className="mb-4 animate-spin text-primary"
+            />
+            <h3 className="text-base font-semibold text-foreground">
+              AI Analysis in Progress
+            </h3>
+            <p className="mt-2 max-w-sm text-[13px] text-muted-foreground">
+              Our AI is analyzing your medical bill for errors and savings.
+              This usually takes 10-30 seconds. The page will update
+              automatically.
             </p>
           </Card>
-        ) : claim ? (
-          <ClaimDetail claim={claim} />
-        ) : (
-          <Card className="py-16 text-center">
-            <p className="text-muted-foreground">Claim not found.</p>
-            <Link href="/claims" className="mt-4 inline-block text-primary hover:underline">
+        ) : !bill ? (
+          <Card className="flex flex-col items-center py-16 text-center">
+            <p className="text-muted-foreground">Bill not found.</p>
+            <Link
+              href="/claims"
+              className="mt-4 text-[13px] text-primary hover:underline"
+            >
               Back to Claims Review
             </Link>
           </Card>
+        ) : (
+          <div className="space-y-6">
+            {/* Summary Card */}
+            <Card className="space-y-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Bill #{bill.id}
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">
+                    {bill.file_name}
+                  </p>
+                </div>
+                <Badge
+                  variant={
+                    bill.status === "COMPLETED"
+                      ? "success"
+                      : bill.status === "FAILED"
+                        ? "destructive"
+                        : "neutral"
+                  }
+                >
+                  {bill.status === "COMPLETED"
+                    ? "Analysis Complete"
+                    : bill.status}
+                </Badge>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Total Amount
+                  </p>
+                  <p className="mt-1 text-xl font-bold text-foreground">
+                    {bill.total_amount
+                      ? formatCurrency(bill.total_amount)
+                      : "—"}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Issues Found
+                  </p>
+                  <p className="mt-1 text-xl font-bold text-foreground">
+                    {findings.length}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-success/5 p-4">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Potential Savings
+                  </p>
+                  <p className="mt-1 text-xl font-bold text-success">
+                    {formatCurrency(totalSavings)}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Line Items */}
+            {bill.line_items && bill.line_items.length > 0 && (
+              <Card className="overflow-hidden p-0">
+                <div className="border-b border-border px-6 py-4">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Line Items
+                  </h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[13px]">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/40 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-4 py-2.5">Description</th>
+                        <th className="px-4 py-2.5">Code</th>
+                        <th className="px-4 py-2.5 text-right">Qty</th>
+                        <th className="px-4 py-2.5 text-right">
+                          Unit Price
+                        </th>
+                        <th className="px-4 py-2.5 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {bill.line_items.map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-4 py-3 text-foreground">
+                            {item.description}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {item.code ?? "—"}
+                          </td>
+                          <td className="px-4 py-3 text-right text-muted-foreground">
+                            {item.quantity}
+                          </td>
+                          <td className="px-4 py-3 text-right text-muted-foreground">
+                            {formatCurrency(item.unit_price)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-foreground">
+                            {formatCurrency(item.total_price)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            )}
+
+            {/* Findings */}
+            <div>
+              <h3 className="mb-3 text-sm font-semibold text-foreground">
+                AI Findings
+                {findings.length > 0 && (
+                  <span className="ml-2 text-muted-foreground">
+                    ({findings.length})
+                  </span>
+                )}
+              </h3>
+              {findings.length === 0 ? (
+                <Card className="flex flex-col items-center py-10 text-center">
+                  <CheckCircle
+                    size={32}
+                    className="mb-3 text-success"
+                  />
+                  <p className="text-[13px] font-medium text-foreground">
+                    No issues detected
+                  </p>
+                  <p className="mt-1 text-[12px] text-muted-foreground">
+                    This bill appears to be clean.
+                  </p>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {findings.map((finding) => (
+                    <FindingCard key={finding.id} finding={finding} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </DashboardLayout>
     </Protected>
+  );
+}
+
+function FindingCard({ finding }: { finding: Finding }) {
+  const label = finding.type
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
+
+  return (
+    <Card className="space-y-3 border-l-4 border-l-transparent">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          {severityIcon(finding.severity)}
+          <div>
+            <h4 className="text-[13px] font-semibold text-foreground">
+              {label}
+            </h4>
+            <div className="mt-1 flex items-center gap-2">
+              {severityBadge(finding.severity)}
+              <span className="text-[11px] text-muted-foreground">
+                {(finding.confidence * 100).toFixed(0)}% confidence
+              </span>
+            </div>
+          </div>
+        </div>
+        {finding.estimated_savings > 0 && (
+          <div className="text-right">
+            <p className="text-[11px] text-muted-foreground">Savings</p>
+            <p className="text-sm font-semibold text-success">
+              {formatCurrency(finding.estimated_savings)}
+            </p>
+          </div>
+        )}
+      </div>
+      <p className="text-[13px] leading-relaxed text-muted-foreground">
+        {finding.explanation}
+      </p>
+      {finding.recommended_action && (
+        <div className="rounded-lg bg-muted/50 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Recommended Action
+          </p>
+          <p className="mt-1 text-[13px] text-foreground">
+            {finding.recommended_action}
+          </p>
+        </div>
+      )}
+    </Card>
   );
 }

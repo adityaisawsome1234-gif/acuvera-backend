@@ -9,28 +9,52 @@ export type BillDetail = {
   status: string;
   total_amount?: number;
   description?: string;
-  created_at: string;
-  updated_at: string;
+  patient_id?: number;
+  organization_id?: number;
+  created_at?: string;
+  uploaded_at?: string;
+  analyzed_at?: string;
+  updated_at?: string;
   line_items?: LineItem[];
   findings?: Finding[];
 };
 
+export type BillListItem = {
+  id: number;
+  patient_id?: number;
+  organization_id?: number;
+  file_name: string;
+  file_type?: string;
+  total_amount?: number;
+  status: string;
+  uploaded_at?: string;
+  analyzed_at?: string;
+  findings_count: number;
+  estimated_savings: number;
+};
+
 export type LineItem = {
   id: number;
+  bill_id?: number;
   description: string;
   code?: string;
   quantity: number;
   unit_price: number;
   total_price: number;
+  created_at?: string;
 };
 
 export type Finding = {
   id: number;
-  finding_type: string;
+  bill_id?: number;
+  type: string;
   severity: string;
-  description: string;
-  recommendation?: string;
-  potential_savings?: number;
+  confidence: number;
+  estimated_savings: number;
+  explanation: string;
+  recommended_action: string;
+  line_item_id?: number;
+  created_at?: string;
 };
 
 export type ProviderDashboard = {

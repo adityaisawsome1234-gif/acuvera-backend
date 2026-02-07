@@ -1,23 +1,29 @@
 import Link from "next/link";
+import { ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function UnauthorizedPage() {
   return (
-    <div className="min-h-screen px-6 py-16">
-      <div className="mx-auto max-w-lg rounded-2xl border border-border bg-secondary/70 p-8 text-center">
-        <h1 className="text-2xl font-semibold text-white">Access restricted</h1>
-        <p className="mt-3 text-slate-300">
-          You don’t have permission to view this page. If you think this is a mistake,
-          contact your administrator.
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
+        <ShieldAlert size={24} className="text-destructive" />
+      </div>
+      <div>
+        <h1 className="text-xl font-semibold text-foreground">
+          Access restricted
+        </h1>
+        <p className="mt-1 max-w-md text-[13px] text-muted-foreground">
+          You don&apos;t have permission to view this page. Contact your
+          administrator if you believe this is a mistake.
         </p>
-        <div className="mt-6 flex justify-center gap-3">
-          <Link href="/dashboard">
-            <Button>Go to dashboard</Button>
-          </Link>
-          <Link href="/">
-            <Button variant="outline">Back to home</Button>
-          </Link>
-        </div>
+      </div>
+      <div className="flex gap-3">
+        <Button asChild>
+          <Link href="/">Go to Dashboard</Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href="/login">Sign in</Link>
+        </Button>
       </div>
     </div>
   );

@@ -35,70 +35,79 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="fixed left-0 top-0 flex h-screen w-64 flex-col bg-sidebar-background text-sidebar-accent-foreground">
-      <div className="px-6 pb-6 pt-8">
+    <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col border-r border-border bg-sidebar-background">
+      {/* Logo */}
+      <div className="px-6 pb-4 pt-7">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Shield size={20} />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+            <Shield size={18} className="text-white" />
           </div>
           <div>
-            <p className="text-lg font-semibold">Acuvera</p>
-            <p className="text-xs text-sidebar-accent-foreground/70">
+            <p className="text-[15px] font-semibold tracking-tight text-sidebar-accent-foreground">
+              Acuvera
+            </p>
+            <p className="text-[11px] font-medium text-muted-foreground">
               Billing Intelligence
             </p>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-4">
+      {/* Navigation */}
+      <nav className="flex-1 space-y-0.5 px-3 pt-2">
+        <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Menu
+        </p>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive =
-            item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);
+            item.path === "/"
+              ? pathname === "/"
+              : pathname.startsWith(item.path);
           return (
             <Link
               key={item.path}
               href={item.path}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-accent-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <Icon size={18} />
+              <Icon size={16} strokeWidth={isActive ? 2.5 : 2} />
               {item.name}
             </Link>
           );
         })}
       </nav>
 
-      {/* User info + sign out */}
-      <div className="border-t border-sidebar-accent/30 px-4 py-4">
+      {/* User section */}
+      <div className="border-t border-border p-3">
         {user ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 px-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3 rounded-lg px-3 py-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <User size={14} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{user.full_name}</p>
-                <p className="truncate text-xs text-sidebar-accent-foreground/70">{user.email}</p>
+                <p className="truncate text-[13px] font-medium text-foreground">
+                  {user.full_name}
+                </p>
+                <p className="truncate text-[11px] text-muted-foreground">
+                  {user.email}
+                </p>
               </div>
             </div>
             <button
               onClick={handleSignOut}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-sidebar-accent-foreground/70 transition hover:bg-red-500/10 hover:text-red-400"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
             >
-              <LogOut size={18} />
+              <LogOut size={14} />
               Sign out
             </button>
           </div>
         ) : null}
-      </div>
-
-      <div className="px-6 pb-6 text-xs text-sidebar-accent-foreground/70">
-        <p className="mt-2">&copy; 2026 Acuvera</p>
       </div>
     </aside>
   );

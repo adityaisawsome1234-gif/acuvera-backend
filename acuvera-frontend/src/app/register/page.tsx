@@ -3,12 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Shield } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { setToken, setUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
 export default function RegisterPage() {
@@ -21,9 +21,9 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const safePassword = password.slice(0, 72);
-    if (password.length > 72) {
-      toast.error("Password was longer than 72 characters and was truncated.");
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
     }
     setLoading(true);
     try {
@@ -36,7 +36,7 @@ export default function RegisterPage() {
           method: "POST",
           body: JSON.stringify({
             email,
-            password: safePassword,
+            password: password.slice(0, 72),
             full_name: fullName,
             role,
           }),
@@ -46,7 +46,7 @@ export default function RegisterPage() {
 
       setToken(res.data.access_token);
       setUser(res.data.user);
-      toast.success("Account created!");
+      toast.success("Account created successfully!");
       router.push("/");
     } catch (err: any) {
       toast.error(err?.message ?? "Registration failed");
@@ -56,25 +56,40 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen px-6 py-16">
-      <div className="mx-auto max-w-md">
-        <Card>
-          <CardHeader>
-            <CardTitle>Create your Acuvera account</CardTitle>
-            <CardDescription>Get personalized billing insights in minutes.</CardDescription>
-          </CardHeader>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-[400px]">
+        {/* Logo */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
+            <Shield size={24} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Create your account
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Get started with AI-powered billing analysis
+          </p>
+        </div>
+
+        {/* Form */}
+        <div className="rounded-2xl border border-border bg-card p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Full name</Label>
+              <Label className="text-[13px] font-medium text-foreground">
+                Full name
+              </Label>
               <Input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Jamie Doe"
                 required
+                autoFocus
               />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label className="text-[13px] font-medium text-foreground">
+                Email address
+              </Label>
               <Input
                 type="email"
                 value={email}
@@ -84,42 +99,66 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Password</Label>
+              <Label className="text-[13px] font-medium text-foreground">
+                Password
+              </Label>
               <Input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value.slice(0, 72))}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Create a secure password"
-                maxLength={72}
                 required
+                minLength={6}
               />
-              <p className="text-xs text-slate-400">
-                {password.length}/72 characters
-              </p>
             </div>
             <div className="space-y-2">
-              <Label>Role</Label>
-              <select
-                className="h-11 w-full rounded-2xl border border-border bg-secondary/70 px-4 text-sm text-white"
-                value={role}
-                onChange={(e) => setRole(e.target.value as any)}
-              >
-                <option value="PATIENT">Patient</option>
-                <option value="PROVIDER">Provider</option>
-                <option value="ADMIN">Admin</option>
-              </select>
+              <Label className="text-[13px] font-medium text-foreground">
+                I am a...
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["PATIENT", "PROVIDER", "ADMIN"] as const).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    className={`rounded-lg border px-3 py-2.5 text-[13px] font-medium transition-all duration-150 ${
+                      role === r
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-card text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground"
+                    }`}
+                  >
+                    {r.charAt(0) + r.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
             </div>
-            <Button type="submit" size="lg" className="w-full" disabled={loading}>
-              {loading ? "Creating account..." : "Create account"}
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Creating account...
+                </span>
+              ) : (
+                "Create account"
+              )}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-slate-400">
-            Already have an account?{" "}
-            <Link href="/login" className="text-primary hover:underline">
-              Sign in
-            </Link>
-          </p>
-        </Card>
+        </div>
+
+        <p className="mt-6 text-center text-[13px] text-muted-foreground">
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="font-medium text-primary hover:underline"
+          >
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );
