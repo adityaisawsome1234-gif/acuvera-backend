@@ -40,7 +40,7 @@ export default function LoginPage() {
       setToken(res.data.access_token);
       setUser(res.data.user);
       toast.success("Welcome back!");
-      router.push("/dashboard");
+      router.push("/");
     } catch (err: any) {
       toast.error(err?.message ?? "Login failed");
     } finally {

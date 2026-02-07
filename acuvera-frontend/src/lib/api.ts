@@ -1,6 +1,12 @@
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ??
-  (typeof window !== "undefined" ? "" : "http://localhost:8000");
+// Strip trailing slashes from the API base URL
+function getApiBase(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl) return envUrl.replace(/\/+$/, "");
+  // Fallback for local development
+  return "http://localhost:8000";
+}
+
+const API_BASE = getApiBase();
 
 type FetchOpts = RequestInit & { suppressAuthRedirect?: boolean };
 
@@ -21,13 +27,21 @@ export async function apiFetch<T = unknown>(
     headers["Content-Type"] = "application/json";
   }
 
-  const res = await fetch(`${API_BASE}/api/v1${path}`, {
-    ...init,
-    headers: { ...headers, ...(init?.headers as Record<string, string>) },
-  });
+  const url = `${API_BASE}/api/v1${path}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...init,
+      headers: { ...headers, ...(init?.headers as Record<string, string>) },
+    });
+  } catch (networkErr) {
+    throw new Error("Network error – cannot reach the API server. Please try again.");
+  }
 
   if (res.status === 401 && typeof window !== "undefined") {
-    const suppress = extra?.suppressAuthRedirect ?? (init as any)?.suppressAuthRedirect;
+    const suppress =
+      extra?.suppressAuthRedirect ?? (init as any)?.suppressAuthRedirect;
     if (!suppress) {
       localStorage.removeItem("acuvera_token");
       localStorage.removeItem("acuvera_user");

@@ -47,7 +47,7 @@ export default function RegisterPage() {
       setToken(res.data.access_token);
       setUser(res.data.user);
       toast.success("Account created!");
-      router.push("/dashboard");
+      router.push("/");
     } catch (err: any) {
       toast.error(err?.message ?? "Registration failed");
     } finally {

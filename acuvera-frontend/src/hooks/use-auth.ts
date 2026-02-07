@@ -17,7 +17,9 @@ export function useAuth() {
   const refresh = useCallback(async () => {
     try {
       const res = await apiFetch<{ success: boolean; data: AuthUser }>(
-        "/auth/me"
+        "/auth/me",
+        undefined,
+        { suppressAuthRedirect: true }
       );
       setUser(res.data);
       setState({ user: res.data, loading: false });
