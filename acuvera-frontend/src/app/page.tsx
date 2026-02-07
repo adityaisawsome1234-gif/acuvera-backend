@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import {
   AlertTriangle,
   DollarSign,
   FileSearch,
   ShieldAlert,
+  Upload,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { KPICard } from "@/components/dashboard/KPICard";
@@ -13,6 +15,7 @@ import { ErrorsByCategoryChart } from "@/components/dashboard/ErrorsByCategoryCh
 import { SavingsTrendChart } from "@/components/dashboard/SavingsTrendChart";
 import { kpiData } from "@/lib/mockData";
 import { formatCurrency, formatPercent } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   return (
@@ -20,6 +23,22 @@ export default function DashboardPage() {
       title="Dashboard"
       subtitle="Clarity in every medical bill"
     >
+      {/* Upload CTA */}
+      <div className="flex items-center justify-between rounded-2xl border border-border bg-card p-6">
+        <div>
+          <h3 className="text-lg font-semibold text-white">Analyze a medical bill</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Upload a PDF to get AI-powered billing error detection and savings recommendations.
+          </p>
+        </div>
+        <Link href="/upload">
+          <Button className="gap-2">
+            <Upload size={16} />
+            Upload Bill
+          </Button>
+        </Link>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-4">
         <KPICard
           title="Claims Reviewed"

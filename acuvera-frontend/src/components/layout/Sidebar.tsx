@@ -9,11 +9,13 @@ import {
   LayoutDashboard,
   Settings,
   Shield,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard },
+  { name: "Upload Bill", path: "/upload", icon: Upload },
   { name: "Claims Review", path: "/claims", icon: FileSearch },
   { name: "Analytics", path: "/analytics", icon: BarChart3 },
   { name: "Reports", path: "/reports", icon: FileText },
