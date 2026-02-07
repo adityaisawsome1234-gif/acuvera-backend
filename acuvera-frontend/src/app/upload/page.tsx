@@ -66,7 +66,7 @@ export default function UploadPage() {
         }
       );
 
-      toast.success("Bill uploaded! AI analysis has started.");
+      toast.success("Analysis complete! Viewing results...");
       router.push(`/claims/${res.data.id}`);
     } catch (err: any) {
       toast.error(err?.message ?? "Upload failed. Please try again.");
@@ -196,7 +196,7 @@ export default function UploadPage() {
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Uploading &amp; analyzing...
+                    Analyzing... this takes 10-30 sec
                   </span>
                 ) : (
                   <>
@@ -213,9 +213,10 @@ export default function UploadPage() {
                   className="mt-0.5 shrink-0 text-muted-foreground"
                 />
                 <p className="text-[12px] leading-relaxed text-muted-foreground">
-                  Your file is processed securely. AI analysis typically
-                  completes in 10-30 seconds. You&apos;ll be redirected to
-                  the results page automatically.
+                  Your file is processed securely. AI analysis runs
+                  immediately and typically takes 10-30 seconds.
+                  You&apos;ll be redirected to the results page with
+                  findings when complete.
                 </p>
               </div>
             </form>

@@ -10,10 +10,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONPATH=/app
 
-# Install system dependencies
+# Install system dependencies (incl. libs needed by PyMuPDF / Pillow)
 RUN apt-get update && \
-    apt-get install -y postgresql-client && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+        postgresql-client \
+        libfreetype6 \
+        libjpeg62-turbo \
+        libpng16-16 \
+        libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
