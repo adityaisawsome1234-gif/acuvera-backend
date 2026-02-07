@@ -430,10 +430,29 @@ export default function ClaimDetailPage() {
   );
 }
 
+/** Map finding type to a human-readable category label */
+function categoryLabel(type: string): { label: string; color: string } {
+  switch (type) {
+    case "OVERCHARGE":
+      return { label: "Financial", color: "text-destructive" };
+    case "DUPLICATE_CHARGE":
+      return { label: "Financial", color: "text-destructive" };
+    case "MISSING_DISCOUNT":
+      return { label: "Financial", color: "text-warning" };
+    case "INCORRECT_CODING":
+      return { label: "Coding", color: "text-primary" };
+    case "DENIAL_RISK":
+      return { label: "Insurance", color: "text-warning" };
+    default:
+      return { label: "Review", color: "text-muted-foreground" };
+  }
+}
+
 function FindingCard({ finding }: { finding: Finding }) {
-  const label = finding.type
+  const typeLabel = finding.type
     .replace(/_/g, " ")
     .replace(/\b\w/g, (l) => l.toUpperCase());
+  const cat = categoryLabel(finding.type);
 
   return (
     <Card className="space-y-3">
@@ -442,11 +461,14 @@ function FindingCard({ finding }: { finding: Finding }) {
           {severityIcon(finding.severity)}
           <div>
             <h4 className="text-[13px] font-semibold text-foreground">
-              {label}
+              {typeLabel}
             </h4>
-            <div className="mt-1 flex items-center gap-2">
+            <div className="mt-1 flex flex-wrap items-center gap-2">
               {severityBadge(finding.severity)}
-              <span className="text-[11px] text-muted-foreground">
+              <span className={`text-[11px] font-medium ${cat.color}`}>
+                {cat.label}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
                 {(finding.confidence * 100).toFixed(0)}% confidence
               </span>
             </div>

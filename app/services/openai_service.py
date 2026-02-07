@@ -4,39 +4,156 @@ from openai import OpenAI
 from app.core.config import settings
 
 
-SYSTEM_PROMPT = (
-    "You are a medical billing expert AI. Analyze bills and return structured JSON data only. "
-    "Look for billing errors, overcharges, duplicate charges, incorrect codes, missing discounts, "
-    "and denial risks. Be specific and actionable."
-)
+# ── Acuvera Medical Billing Error Detection System Prompt ────────────────
 
-ANALYSIS_SCHEMA = """{
-  "summary": "A brief 1-2 sentence summary of what this bill is for",
+SYSTEM_PROMPT = """You are Acuvera's Medical Billing Error Detection AI.
+Your task is to analyze healthcare billing documents (medical bills, EOBs, claims, or itemized statements) and identify ALL potential financial, coding, compliance, and data-integrity errors.
+
+You must operate conservatively, prioritize accuracy over speculation, and flag uncertainties rather than guessing.
+
+---
+
+## INPUTS YOU MAY RECEIVE
+
+* OCR or structured text extracted from a bill or EOB
+* Patient demographic data (optional)
+* Provider/facility information
+* CPT/HCPCS/ICD codes
+* Line-item charges
+* Allowed/paid/denied amounts
+* Insurance plan metadata
+* Historical billing context (optional)
+
+---
+
+## PRIMARY OBJECTIVE
+
+Detect and clearly report:
+
+1. Financial Errors
+
+* Overcharges relative to norms or plan allowances
+* Duplicate line items or services
+* Incorrect totals or arithmetic inconsistencies
+* Balance billing inconsistencies
+* Unexpected out-of-network charges
+* Charges for canceled or denied services
+
+2. Coding Errors
+
+* Invalid, expired, or mismatched CPT/HCPCS/ICD codes
+* Gender/age incompatible procedures
+* Diagnosis/procedure mismatch
+* Upcoding or unbundling patterns
+* Missing modifiers where required
+* Mutually exclusive code combinations
+
+3. Administrative/Data Errors
+
+* Incorrect patient/provider identifiers
+* Date inconsistencies
+* Missing required fields
+* Mismatched NPI/provider data
+* Coverage eligibility conflicts
+
+4. Insurance Adjudication Issues
+
+* Improper denials
+* Misapplied deductibles/copays
+* Coordination of benefits issues
+* Non-covered service misclassification
+* Network status inconsistencies
+
+5. Compliance / Risk Indicators
+
+* Suspicious billing patterns
+* Unusual frequency patterns
+* Services inconsistent with visit context
+* Documentation gaps
+
+---
+
+## ANALYSIS PROCESS (MANDATORY)
+
+Step 1 — Parse
+Extract structured entities:
+
+* Codes
+* Charges
+* Dates
+* Providers
+* Totals
+* Adjustments
+
+Step 2 — Validate
+Cross-check:
+
+* Internal consistency
+* Coding logic relationships
+* Financial arithmetic
+* Eligibility assumptions
+
+Step 3 — Compare
+Evaluate against:
+
+* Known billing rules
+* Logical medical relationships
+* Expected billing structure
+
+Step 4 — Flag
+List EVERY issue found.
+Do NOT suppress minor or uncertain issues.
+
+---
+
+## CRITICAL BEHAVIOR RULES
+
+* Never fabricate medical or payer rules
+* Never assume coverage without evidence
+* Clearly mark uncertainty
+* Prefer flagging over omission
+* Explain reasoning concisely
+* Do NOT output conversational text
+* Output ONLY structured JSON"""
+
+
+# ── Output schema for GPT (merged: Acuvera detection + line-item extraction) ──
+
+OUTPUT_SCHEMA = """{
+  "summary": "Concise overview of what this bill is for and key findings",
+  "risk_score": 0,
   "total_amount": 0.0,
   "line_items": [
     {
-      "description": "Service or procedure name",
-      "code": "CPT/HCPCS code if visible",
+      "description": "Service or procedure name exactly as shown on the bill",
+      "code": "CPT/HCPCS code if visible, otherwise empty string",
       "quantity": 1,
       "unit_price": 0.0,
       "total_price": 0.0
     }
   ],
-  "issues": [
+  "detected_issues": [
     {
-      "title": "Short issue title (e.g. Duplicate Charge, Overcharge, Incorrect Coding)",
-      "description": "Detailed explanation of the issue found",
-      "severity": "low|medium|high",
+      "category": "Financial | Coding | Administrative | Insurance | Compliance",
+      "severity": "Low | Medium | High",
+      "description": "Clear explanation of the issue found",
+      "confidence": 0.0,
+      "affected_items": ["line numbers or codes affected"],
+      "recommended_action": "What the patient/provider should do",
       "estimated_savings": 0.0
     }
   ],
-  "estimated_savings_usd": 0.0,
-  "confidence": 0.0
+  "clean_items": [
+    "Line items verified as correct"
+  ],
+  "missing_information": [
+    "Data that would be needed for deeper validation"
+  ]
 }"""
 
 
 class OpenAIService:
-    """Service for interacting with OpenAI API"""
+    """Service for interacting with OpenAI API using Acuvera's detection prompt."""
 
     def __init__(self):
         if not settings.OPENAI_API_KEY:
@@ -44,15 +161,18 @@ class OpenAIService:
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = settings.OPENAI_MODEL  # e.g. "gpt-4o-mini"
 
+    # ── Text-based analysis ───────────────────────────────────────
+
     def analyze_bill_text(self, text: str) -> Dict[str, Any]:
         """Analyze medical bill text and return structured JSON."""
-        prompt = f"""Analyze the following medical bill text and return a JSON object with this structure:
-{ANALYSIS_SCHEMA}
-
-Bill text:
-{text}
-
-Return ONLY valid JSON, no additional text or markdown formatting."""
+        prompt = (
+            "Analyze the following medical bill text. "
+            "Extract all line items, amounts, and codes. "
+            "Then perform the full error-detection analysis as instructed.\n\n"
+            f"Return a JSON object matching this exact structure:\n{OUTPUT_SCHEMA}\n\n"
+            f"Bill text:\n{text}\n\n"
+            "Return ONLY valid JSON."
+        )
 
         try:
             response = self.client.chat.completions.create(
@@ -62,11 +182,14 @@ Return ONLY valid JSON, no additional text or markdown formatting."""
                     {"role": "user", "content": prompt},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.3,
+                temperature=0.2,
+                max_tokens=4096,
             )
             return self._parse_response(response)
         except Exception as e:
             raise Exception(f"OpenAI text analysis error: {str(e)}")
+
+    # ── Vision-based analysis (scanned PDFs, images) ──────────────
 
     def analyze_bill_images(self, image_data_uris: List[str]) -> Dict[str, Any]:
         """
@@ -76,15 +199,15 @@ Return ONLY valid JSON, no additional text or markdown formatting."""
             image_data_uris: List of base64 data-URI strings
                 e.g. ["data:image/png;base64,iVBOR..."]
         """
-        # Build the content array with text + images
         content: list = [
             {
                 "type": "text",
                 "text": (
-                    f"Analyze this medical bill image(s) and return a JSON object with this structure:\n"
-                    f"{ANALYSIS_SCHEMA}\n\n"
-                    f"Extract all line items, amounts, codes, and identify any billing issues. "
-                    f"Return ONLY valid JSON."
+                    "Analyze this medical bill image(s). "
+                    "Extract all line items, amounts, codes, dates, and provider information. "
+                    "Then perform the full error-detection analysis as instructed.\n\n"
+                    f"Return a JSON object matching this exact structure:\n{OUTPUT_SCHEMA}\n\n"
+                    "Return ONLY valid JSON."
                 ),
             }
         ]
@@ -98,7 +221,6 @@ Return ONLY valid JSON, no additional text or markdown formatting."""
             )
 
         try:
-            # Use gpt-4o-mini which supports vision
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -106,28 +228,45 @@ Return ONLY valid JSON, no additional text or markdown formatting."""
                     {"role": "user", "content": content},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.3,
+                temperature=0.2,
                 max_tokens=4096,
             )
             return self._parse_response(response)
         except Exception as e:
             raise Exception(f"OpenAI vision analysis error: {str(e)}")
 
+    # ── Response parsing ──────────────────────────────────────────
+
     def _parse_response(self, response) -> Dict[str, Any]:
-        """Parse OpenAI response into a dictionary."""
+        """Parse OpenAI response into a dictionary with guaranteed fields."""
         content = response.choices[0].message.content
         try:
             result = json.loads(content)
             if not isinstance(result, dict):
                 return {"raw": content}
 
-            # Ensure required fields
+            # Ensure all required fields exist with defaults
             result.setdefault("summary", "")
-            result.setdefault("issues", [])
-            result.setdefault("estimated_savings_usd", 0.0)
-            result.setdefault("confidence", 0.0)
-            result.setdefault("line_items", [])
+            result.setdefault("risk_score", 0)
             result.setdefault("total_amount", 0.0)
+            result.setdefault("line_items", [])
+            result.setdefault("detected_issues", [])
+            result.setdefault("clean_items", [])
+            result.setdefault("missing_information", [])
+
+            # Legacy compat: if the model returned "issues" instead of "detected_issues"
+            if "issues" in result and not result["detected_issues"]:
+                result["detected_issues"] = result.pop("issues")
+
+            # Ensure confidence and estimated_savings on each issue
+            for issue in result["detected_issues"]:
+                issue.setdefault("confidence", 0.8)
+                issue.setdefault("estimated_savings", 0.0)
+                issue.setdefault("category", "Financial")
+                issue.setdefault("severity", "Medium")
+                issue.setdefault("recommended_action", "Review this item with your billing department.")
+                issue.setdefault("affected_items", [])
+
             return result
         except json.JSONDecodeError:
             return {"raw": content}

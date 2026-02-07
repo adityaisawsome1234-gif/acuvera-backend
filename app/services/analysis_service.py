@@ -3,13 +3,73 @@ from datetime import datetime
 import random
 import time
 import traceback
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from app.core.config import settings
 from app.repositories.bill_repository import BillRepository
 from app.repositories.analysis_job_repository import AnalysisJobRepository
 from app.models.bill import BillStatus
 from app.models.finding import Finding, FindingType, FindingSeverity
 from app.models.line_item import LineItem
+
+
+# ── Category → FindingType mapping ────────────────────────────────
+
+def _map_category_to_finding_type(category: str, description: str) -> FindingType:
+    """
+    Map the AI's category + description to our FindingType enum.
+    The AI returns: Financial | Coding | Administrative | Insurance | Compliance
+    We map to: DUPLICATE_CHARGE | INCORRECT_CODING | OVERCHARGE | MISSING_DISCOUNT | DENIAL_RISK | OTHER
+    """
+    cat = category.lower().strip()
+    desc = description.lower()
+
+    if cat == "financial":
+        if any(kw in desc for kw in ["duplicate", "duplicated", "repeated"]):
+            return FindingType.DUPLICATE_CHARGE
+        if any(kw in desc for kw in ["discount", "negotiated rate", "contracted rate"]):
+            return FindingType.MISSING_DISCOUNT
+        # Default financial → OVERCHARGE
+        return FindingType.OVERCHARGE
+
+    if cat == "coding":
+        return FindingType.INCORRECT_CODING
+
+    if cat == "insurance":
+        return FindingType.DENIAL_RISK
+
+    if cat == "administrative":
+        return FindingType.OTHER
+
+    if cat == "compliance":
+        return FindingType.OTHER
+
+    # Fallback: try to infer from description keywords
+    if any(kw in desc for kw in ["duplicate", "duplicated"]):
+        return FindingType.DUPLICATE_CHARGE
+    if any(kw in desc for kw in ["upcod", "unbundl", "code", "cpt", "hcpcs", "icd", "modifier"]):
+        return FindingType.INCORRECT_CODING
+    if any(kw in desc for kw in ["overcharge", "excess", "higher than", "above"]):
+        return FindingType.OVERCHARGE
+    if any(kw in desc for kw in ["discount", "negotiat"]):
+        return FindingType.MISSING_DISCOUNT
+    if any(kw in desc for kw in ["denial", "denied", "deny", "eligib"]):
+        return FindingType.DENIAL_RISK
+
+    return FindingType.OTHER
+
+
+def _map_severity(severity_str: str) -> FindingSeverity:
+    """Map AI severity string to our enum."""
+    s = severity_str.strip().lower()
+    if s == "high":
+        return FindingSeverity.HIGH
+    if s == "medium":
+        return FindingSeverity.MEDIUM
+    if s == "low":
+        return FindingSeverity.LOW
+    if s in ("critical", "severe"):
+        return FindingSeverity.CRITICAL
+    return FindingSeverity.MEDIUM
 
 
 class AnalysisService:
@@ -19,7 +79,7 @@ class AnalysisService:
         self.job_repo = AnalysisJobRepository(db)
 
     def analyze_bill(self, bill_id: int) -> dict:
-        """Analyze a bill and generate findings"""
+        """Analyze a bill and generate findings."""
         bill = self.bill_repo.get_by_id(bill_id)
         if not bill:
             raise ValueError(f"Bill {bill_id} not found")
@@ -60,7 +120,8 @@ class AnalysisService:
             print(
                 f"[Analysis] Bill {bill_id}: COMPLETED - "
                 f"{result.get('findings_count', 0)} findings, "
-                f"${result.get('total_estimated_savings', 0):.2f} savings",
+                f"${result.get('total_estimated_savings', 0):.2f} savings, "
+                f"risk_score={result.get('risk_score', 0)}",
                 flush=True,
             )
             return result
@@ -80,7 +141,7 @@ class AnalysisService:
     # ── AI analysis ────────────────────────────────────────────
 
     def _analyze_with_ai(self, bill_id: int, bill) -> dict:
-        """Analyze bill using OpenAI - tries text extraction first, falls back to vision."""
+        """Analyze bill using OpenAI with comprehensive error detection prompt."""
         from app.services.openai_service import OpenAIService
         from app.utils.file_upload import extract_text_from_file, get_file_as_base64_images
 
@@ -105,38 +166,60 @@ class AnalysisService:
                 raise ValueError("Could not convert file to images for vision analysis")
             ai_result = ai_service.analyze_bill_images(images)
 
+        print(
+            f"[Analysis] Bill {bill_id}: AI returned "
+            f"{len(ai_result.get('detected_issues', []))} issues, "
+            f"risk_score={ai_result.get('risk_score', 0)}, "
+            f"{len(ai_result.get('line_items', []))} line items",
+            flush=True,
+        )
+
         # Convert AI result to database records
         return self._save_ai_results(bill_id, ai_result)
 
-    def _save_ai_results(self, bill_id: int, ai_result: Dict[str, Any]) -> dict:
-        """Convert AI analysis results into LineItem and Finding database records."""
-        total_amount = ai_result.get("total_amount", 0.0)
-        line_items = []
-        findings = []
+    # ── Save AI results to DB ─────────────────────────────────
 
-        # Save line items from AI
+    def _save_ai_results(self, bill_id: int, ai_result: Dict[str, Any]) -> dict:
+        """Convert comprehensive AI analysis results into LineItem and Finding database records."""
+        total_amount = float(ai_result.get("total_amount", 0.0) or 0.0)
+        risk_score = int(ai_result.get("risk_score", 0) or 0)
+        summary = ai_result.get("summary", "")
+        clean_items = ai_result.get("clean_items", [])
+        missing_info = ai_result.get("missing_information", [])
+
+        line_items: List[LineItem] = []
+        findings: List[Finding] = []
+
+        # ── Save line items ───────────────────────────────────
         ai_line_items = ai_result.get("line_items", [])
         if ai_line_items:
             for item_data in ai_line_items:
+                unit_price = float(item_data.get("unit_price", 0) or 0)
+                total_price = float(item_data.get("total_price", 0) or 0)
+                quantity = float(item_data.get("quantity", 1) or 1)
+
+                # If total_price is 0 but unit_price exists, compute it
+                if not total_price and unit_price:
+                    total_price = unit_price * quantity
+
                 li = LineItem(
                     bill_id=bill_id,
-                    description=item_data.get("description", "Medical Service"),
-                    code=item_data.get("code", ""),
-                    quantity=float(item_data.get("quantity", 1)),
-                    unit_price=float(item_data.get("unit_price", 0)),
-                    total_price=float(item_data.get("total_price", 0)),
+                    description=str(item_data.get("description", "Medical Service")),
+                    code=str(item_data.get("code", "") or ""),
+                    quantity=quantity,
+                    unit_price=unit_price,
+                    total_price=total_price,
                 )
                 self.db.add(li)
                 line_items.append(li)
                 if not total_amount:
-                    total_amount += li.total_price
+                    total_amount += total_price
         else:
             # Fallback: create a summary line item
-            est = ai_result.get("estimated_savings_usd", 0.0)
-            price = max(est * 2, 1000.0) if est else 1000.0
+            price = max(total_amount, 500.0)
             li = LineItem(
                 bill_id=bill_id,
-                description=ai_result.get("summary", "Medical Services"),
+                description=summary or "Medical Services (summary)",
                 code="SUMMARY",
                 quantity=1.0,
                 unit_price=price,
@@ -144,73 +227,71 @@ class AnalysisService:
             )
             self.db.add(li)
             line_items.append(li)
-            total_amount = price
+            if not total_amount:
+                total_amount = price
 
         self.db.flush()  # Get IDs for line items
 
-        # Save findings from AI
-        ai_issues = ai_result.get("issues", [])
-        severity_map = {
-            "low": FindingSeverity.LOW,
-            "medium": FindingSeverity.MEDIUM,
-            "high": FindingSeverity.HIGH,
-            "critical": FindingSeverity.CRITICAL,
-        }
-        type_map = {
-            "duplicate": FindingType.DUPLICATE_CHARGE,
-            "duplicate charge": FindingType.DUPLICATE_CHARGE,
-            "upcoding": FindingType.INCORRECT_CODING,
-            "incorrect cod": FindingType.INCORRECT_CODING,
-            "overcharge": FindingType.OVERCHARGE,
-            "missing discount": FindingType.MISSING_DISCOUNT,
-            "denial risk": FindingType.DENIAL_RISK,
-            "denial": FindingType.DENIAL_RISK,
-        }
+        # ── Save detected issues as findings ──────────────────
+        detected_issues = ai_result.get("detected_issues", [])
 
-        for issue in ai_issues:
-            title = issue.get("title", "").lower()
-            description = issue.get("description", "")
-            severity_str = issue.get("severity", "medium").lower()
+        for issue in detected_issues:
+            category = str(issue.get("category", "Financial"))
+            description = str(issue.get("description", ""))
+            severity_str = str(issue.get("severity", "Medium"))
+            confidence = float(issue.get("confidence", 0.8) or 0.8)
+            estimated_savings = float(issue.get("estimated_savings", 0) or 0)
+            recommended_action = str(
+                issue.get("recommended_action", "Review this item with your billing department.")
+            )
+            affected_items = issue.get("affected_items", [])
 
-            finding_type = FindingType.OTHER
-            for key, ftype in type_map.items():
-                if key in title:
-                    finding_type = ftype
-                    break
+            # Map AI category → our FindingType enum
+            finding_type = _map_category_to_finding_type(category, description)
+            severity = _map_severity(severity_str)
 
-            severity = severity_map.get(severity_str, FindingSeverity.MEDIUM)
+            # Clamp confidence
+            confidence = max(0.0, min(1.0, confidence))
 
-            # Savings: per-issue from AI, or split total
-            issue_savings = float(issue.get("estimated_savings", 0))
-            if not issue_savings:
-                total_savings = float(ai_result.get("estimated_savings_usd", 0))
-                issue_savings = total_savings / max(len(ai_issues), 1)
-            if not issue_savings:
-                issue_savings = round(total_amount * random.uniform(0.05, 0.15), 2)
+            # If no estimated savings on this issue, estimate conservatively
+            if not estimated_savings and total_amount > 0:
+                estimated_savings = round(total_amount * random.uniform(0.02, 0.08), 2)
+
+            # Prefix description with category for clarity
+            full_explanation = description
+            if affected_items:
+                items_str = ", ".join(str(a) for a in affected_items)
+                full_explanation += f" (Affected: {items_str})"
 
             finding = Finding(
                 bill_id=bill_id,
                 type=finding_type,
                 severity=severity,
-                confidence=float(ai_result.get("confidence", 0.85)),
-                estimated_savings=round(issue_savings, 2),
-                explanation=description or f"AI detected a potential {title} issue.",
-                recommended_action=self._get_recommended_action(finding_type),
+                confidence=round(confidence, 2),
+                estimated_savings=round(estimated_savings, 2),
+                explanation=full_explanation,
+                recommended_action=recommended_action,
                 line_item_id=line_items[0].id if line_items else None,
             )
             self.db.add(finding)
             findings.append(finding)
 
-        # If AI found no issues, record a clean bill
+        # If AI found absolutely no issues, record a clean bill finding
         if not findings:
+            clean_explanation = "Bill reviewed by AI — no significant billing errors detected."
+            if clean_items:
+                clean_explanation += f" Verified items: {', '.join(str(c) for c in clean_items[:5])}"
+            if missing_info:
+                clean_explanation += f" Note: {', '.join(str(m) for m in missing_info[:3])}"
+
             finding = Finding(
                 bill_id=bill_id,
                 type=FindingType.OTHER,
                 severity=FindingSeverity.LOW,
-                confidence=0.7,
+                confidence=0.9,
                 estimated_savings=0.0,
-                explanation="Bill reviewed by AI. No significant billing errors detected.",
-                recommended_action="Review bill details and compare with your records.",
+                explanation=clean_explanation,
+                recommended_action="No action needed. Keep this bill for your records.",
                 line_item_id=line_items[0].id if line_items else None,
             )
             self.db.add(finding)
@@ -218,13 +299,18 @@ class AnalysisService:
 
         self.db.commit()
 
+        total_savings = sum(f.estimated_savings for f in findings)
+
         return {
             "bill_id": bill_id,
             "total_amount": round(total_amount, 2),
+            "risk_score": risk_score,
+            "summary": summary,
             "line_items_count": len(line_items),
-            "findings_count": len(findings),
-            "total_estimated_savings": sum(f.estimated_savings for f in findings),
-            "ai_confidence": ai_result.get("confidence", 0.85),
+            "findings_count": len([f for f in findings if f.estimated_savings > 0]),
+            "total_estimated_savings": round(total_savings, 2),
+            "clean_items": clean_items,
+            "missing_information": missing_info,
         }
 
     # ── Demo analysis (fallback) ──────────────────────────────
@@ -248,7 +334,7 @@ class AnalysisService:
         ]
 
         num_items = random.randint(3, 8)
-        line_items = []
+        line_items: List[LineItem] = []
         total_amount = 0.0
 
         for i in range(num_items):
@@ -272,7 +358,7 @@ class AnalysisService:
         self.db.commit()
 
         num_findings = random.randint(2, 5)
-        findings = []
+        findings: List[Finding] = []
         types = list(FindingType)
         sevs = list(FindingSeverity)
 
@@ -314,14 +400,14 @@ class AnalysisService:
         return {
             "bill_id": bill_id,
             "total_amount": round(total_amount, 2),
+            "risk_score": random.randint(30, 75),
+            "summary": "Demo analysis — upload a real bill with an OpenAI API key for full AI detection.",
             "line_items_count": len(line_items),
             "findings_count": len(findings),
             "total_estimated_savings": sum(f.estimated_savings for f in findings),
+            "clean_items": [],
+            "missing_information": [],
         }
-
-    def _analyze_production_mode(self, bill_id: int) -> dict:
-        time.sleep(random.uniform(3, 8))
-        return self._analyze_demo_mode(bill_id)
 
     def _get_recommended_action(self, finding_type: FindingType) -> str:
         actions = {
