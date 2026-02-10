@@ -108,6 +108,23 @@ export function Sidebar() {
             </button>
           </div>
         ) : null}
+
+        {/* Policy links */}
+        <div className="mt-2 flex items-center gap-3 px-3 py-1">
+          <Link
+            href="/privacy"
+            className="text-[11px] text-muted-foreground transition-colors hover:text-foreground hover:underline"
+          >
+            Privacy
+          </Link>
+          <span className="text-[10px] text-muted-foreground/50">&middot;</span>
+          <Link
+            href="/support"
+            className="text-[11px] text-muted-foreground transition-colors hover:text-foreground hover:underline"
+          >
+            Support
+          </Link>
+        </div>
       </div>
     </aside>
   );

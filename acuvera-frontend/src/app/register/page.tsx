@@ -159,6 +159,24 @@ export default function RegisterPage() {
             Sign in
           </Link>
         </p>
+
+        <p className="mt-2 text-center text-[11px] text-muted-foreground">
+          By creating an account, you agree to our{" "}
+          <Link href="/privacy" className="text-primary hover:underline">
+            Privacy Policy
+          </Link>
+          .
+        </p>
+
+        <div className="mt-2 flex items-center justify-center gap-3 text-[11px] text-muted-foreground">
+          <Link href="/privacy" className="hover:text-foreground hover:underline">
+            Privacy Policy
+          </Link>
+          <span>&middot;</span>
+          <Link href="/support" className="hover:text-foreground hover:underline">
+            Support
+          </Link>
+        </div>
       </div>
     </div>
   );
