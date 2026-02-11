@@ -46,13 +46,13 @@ class BillRepository:
         return bill
 
     def can_access(self, bill: Bill, user_id: int, user_role: UserRole, user_org_id: Optional[int]) -> bool:
-        """Check if user can access this bill based on RBAC"""
-        if user_role == UserRole.ADMIN:
+        """Check if user can access this bill — users only see their own data."""
+        # Every user can access bills they uploaded
+        if bill.patient_id == user_id:
             return True
-        if user_role == UserRole.PATIENT:
-            return bill.patient_id == user_id
-        if user_role == UserRole.PROVIDER:
-            return bill.organization_id == user_org_id
+        # Providers can also access bills from their organization
+        if user_role == UserRole.PROVIDER and user_org_id and bill.organization_id == user_org_id:
+            return True
         return False
 
     def get_stats_for_organization(self, organization_id: int) -> dict:

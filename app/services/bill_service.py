@@ -75,18 +75,17 @@ class BillService:
         return {"bill": bill}
 
     def list_bills(self, user: User) -> List[dict]:
-        """List bills based on user role"""
-        if user.role == UserRole.ADMIN:
-            from app.models.bill import Bill
-            bills = (
-                self.db.query(Bill).order_by(Bill.created_at.desc()).limit(100).all()
-            )
-        elif user.role == UserRole.PATIENT:
-            bills = self.bill_repo.get_by_patient_id(user.id)
-        elif user.role == UserRole.PROVIDER:
-            if not user.organization_id:
-                return []
-            bills = self.bill_repo.get_by_organization_id(user.organization_id)
-        else:
-            return []
+        """List bills — every user only sees their own bills."""
+        # All roles see only the bills they personally uploaded.
+        # Providers additionally see bills from their organization.
+        bills = self.bill_repo.get_by_patient_id(user.id)
+
+        if user.role == UserRole.PROVIDER and user.organization_id:
+            org_bills = self.bill_repo.get_by_organization_id(user.organization_id)
+            # Merge without duplicates
+            seen_ids = {b.id for b in bills}
+            for b in org_bills:
+                if b.id not in seen_ids:
+                    bills.append(b)
+
         return [{"bill": bill} for bill in bills]
