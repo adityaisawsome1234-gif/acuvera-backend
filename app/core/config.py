@@ -33,9 +33,9 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
     
-    # OpenAI
+    # OpenAI (gpt-4o is more accurate than gpt-4o-mini for medical billing analysis)
     OPENAI_API_KEY: Optional[str] = None
-    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_MODEL: str = "gpt-4o"
     
     # App
     DEBUG: bool = True

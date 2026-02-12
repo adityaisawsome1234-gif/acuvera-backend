@@ -112,15 +112,26 @@ Do NOT suppress minor or uncertain issues.
 * Never assume coverage without evidence
 * Clearly mark uncertainty
 * Prefer flagging over omission
-* Explain reasoning concisely
+* Write in PLAIN LANGUAGE — patients and billing staff must understand every finding
 * Do NOT output conversational text
-* Output ONLY structured JSON"""
+* Output ONLY structured JSON
+
+---
+
+## OUTPUT REQUIREMENTS: BE SPECIFIC AND DETAILED
+
+For each issue you find:
+1. State exactly WHAT was billed (procedure name, code, amount)
+2. State WHAT the problem is (e.g., "Billed $450; typical range for this service is $120–180")
+3. Explain WHY it matters (e.g., "You may be overcharged by ~$270")
+4. Give a clear, step-by-step RECOMMENDED ACTION
+5. Include line numbers or codes from the bill when referring to specific charges"""
 
 
-# ── Output schema for GPT (merged: Acuvera detection + line-item extraction) ──
+# ── Output schema for GPT (detailed, patient-friendly) ──
 
 OUTPUT_SCHEMA = """{
-  "summary": "Concise overview of what this bill is for and key findings",
+  "summary": "2–3 sentence plain-language overview: what this bill is for, total amount, and the main issues or that it looks clean",
   "risk_score": 0,
   "total_amount": 0.0,
   "line_items": [
@@ -136,15 +147,17 @@ OUTPUT_SCHEMA = """{
     {
       "category": "Financial | Coding | Administrative | Insurance | Compliance",
       "severity": "Low | Medium | High",
-      "description": "Clear explanation of the issue found",
+      "description": "DETAILED plain-language explanation. Include: (1) What was billed — specific procedure, code, and amount. (2) What the problem is — e.g. 'This charge appears twice' or 'Billed $X; typical range is $Y–Z'. (3) Why it matters — impact on the patient. Be specific with numbers and line references.",
       "confidence": 0.0,
-      "affected_items": ["line numbers or codes affected"],
-      "recommended_action": "What the patient/provider should do",
-      "estimated_savings": 0.0
+      "affected_items": ["specific line numbers, codes, or procedure names from the bill"],
+      "recommended_action": "Clear step-by-step action. Example: '1. Call your provider's billing department. 2. Ask them to verify if [procedure] was performed twice. 3. Request a corrected bill if it was a duplicate.'",
+      "estimated_savings": 0.0,
+      "billed_amount": 0.0,
+      "expected_amount": 0.0
     }
   ],
   "clean_items": [
-    "Line items verified as correct"
+    "Line items verified as correct, with brief reason if helpful"
   ],
   "missing_information": [
     "Data that would be needed for deeper validation"
@@ -169,6 +182,8 @@ class OpenAIService:
             "Analyze the following medical bill text. "
             "Extract all line items, amounts, and codes. "
             "Then perform the full error-detection analysis as instructed.\n\n"
+            "Write each finding in DETAIL so a patient can understand exactly what was billed, "
+            "what the issue is, and what to do next. Include specific amounts and line references.\n\n"
             f"Return a JSON object matching this exact structure:\n{OUTPUT_SCHEMA}\n\n"
             f"Bill text:\n{text}\n\n"
             "Return ONLY valid JSON."
@@ -182,8 +197,8 @@ class OpenAIService:
                     {"role": "user", "content": prompt},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.2,
-                max_tokens=4096,
+                temperature=0.15,
+                max_tokens=8192,
             )
             return self._parse_response(response)
         except Exception as e:
@@ -206,6 +221,8 @@ class OpenAIService:
                     "Analyze this medical bill image(s). "
                     "Extract all line items, amounts, codes, dates, and provider information. "
                     "Then perform the full error-detection analysis as instructed.\n\n"
+                    "Write each finding in DETAIL so a patient can understand exactly what was billed, "
+                    "what the issue is, and what to do next. Include specific amounts and line references.\n\n"
                     f"Return a JSON object matching this exact structure:\n{OUTPUT_SCHEMA}\n\n"
                     "Return ONLY valid JSON."
                 ),
@@ -228,8 +245,8 @@ class OpenAIService:
                     {"role": "user", "content": content},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.2,
-                max_tokens=4096,
+                temperature=0.15,
+                max_tokens=8192,
             )
             return self._parse_response(response)
         except Exception as e:
