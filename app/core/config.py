@@ -1,3 +1,5 @@
+import os
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -5,6 +7,17 @@ from typing import Optional
 class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql://user:password@localhost:5432/acuvera_db"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def resolve_database_url(cls, v: str) -> str:
+        """Prefer DATABASE_URL from env. If localhost, try Render fallbacks (DATABASE_INTERNAL_URL)."""
+        url = os.environ.get("DATABASE_URL") or v
+        if "localhost" in url:
+            fallback = os.environ.get("DATABASE_INTERNAL_URL") or os.environ.get("INTERNAL_DATABASE_URL")
+            if fallback:
+                return fallback
+        return url
     
     # PostgreSQL connection details (used by docker-compose, can be ignored if using DATABASE_URL)
     POSTGRES_USER: Optional[str] = None
