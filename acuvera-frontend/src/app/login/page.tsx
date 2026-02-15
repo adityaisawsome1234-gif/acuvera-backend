@@ -36,7 +36,7 @@ export default function LoginPage() {
       setToken(res.data.access_token);
       setUser(res.data.user);
       toast.success("Welcome back!");
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: any) {
       toast.error(err?.message ?? "Login failed. Please check your credentials.");
     } finally {

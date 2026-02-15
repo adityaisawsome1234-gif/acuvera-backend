@@ -1,204 +1,177 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowRight,
-  DollarSign,
-  FileSearch,
-  ShieldAlert,
-  Upload,
-} from "lucide-react";
-import { Protected } from "@/components/layout/protected";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { KPICard } from "@/components/dashboard/KPICard";
+import { Shield, FileSearch, DollarSign, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { apiFetch } from "@/lib/api";
-import { BillListItem, StandardResponse } from "@/lib/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function DashboardPage() {
-  const [bills, setBills] = useState<BillListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function LandingPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
+  // If logged in, redirect to dashboard
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await apiFetch<StandardResponse<BillListItem[]>>("/bills/");
-        setBills(res.data ?? []);
-      } catch {
-        setBills([]);
-      } finally {
-        setLoading(false);
-      }
+    if (!loading && user) {
+      router.replace("/dashboard");
     }
-    load();
-  }, []);
+  }, [user, loading, router]);
 
-  // Compute KPIs from real data
-  const totalBills = bills.length;
-  const totalFindings = bills.reduce((s, b) => s + b.findings_count, 0);
-  const totalSavings = bills.reduce((s, b) => s + b.estimated_savings, 0);
-  const completedBills = bills.filter((b) => b.status === "COMPLETED").length;
-  const reviewRate = totalBills > 0 ? (completedBills / totalBills) * 100 : 0;
-
-  const recentBills = [...bills]
-    .sort(
-      (a, b) =>
-        new Date(b.uploaded_at ?? 0).getTime() -
-        new Date(a.uploaded_at ?? 0).getTime()
-    )
-    .slice(0, 5);
+  if (loading || user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
-    <Protected>
-      <DashboardLayout
-        title="Dashboard"
-        subtitle="AI-powered medical billing intelligence"
-      >
-        {/* Upload CTA */}
-        <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-foreground">
-                Analyze a medical bill
-              </h3>
-              <p className="mt-1 max-w-lg text-[13px] text-muted-foreground">
-                Upload a PDF and our AI will detect billing errors, overcharges,
-                and savings opportunities in seconds.
-              </p>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Animated gradient background */}
+      <div
+        className="pointer-events-none fixed inset-0 opacity-30"
+        style={{
+          background:
+            "linear-gradient(135deg, hsl(var(--primary) / 0.08) 0%, transparent 40%, hsl(var(--success) / 0.05) 60%, transparent 100%)",
+          backgroundSize: "200% 200%",
+          animation: "gradient-shift 12s ease infinite",
+        }}
+      />
+
+      {/* Header */}
+      <header className="relative z-10 flex items-center justify-between px-6 py-5 sm:px-12">
+        <div
+          className="flex items-center gap-3"
+          style={{ animation: "fade-in 0.6s ease-out" }}
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
+            <Shield size={20} className="text-white" />
+          </div>
+          <div>
+            <p className="text-lg font-semibold tracking-tight text-foreground">
+              Acuvera
+            </p>
+            <p className="text-[11px] font-medium text-muted-foreground">
+              Billing Intelligence
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/login"
+          style={{ animation: "fade-in 0.6s ease-out 0.2s backwards" }}
+        >
+          <Button variant="outline" size="sm" className="gap-2">
+            Sign in
+          </Button>
+        </Link>
+      </header>
+
+      {/* Hero */}
+      <main className="relative z-10 flex flex-col items-center px-6 pt-16 pb-24 text-center sm:px-12 sm:pt-24">
+        {/* Logo with glow */}
+        <div
+          className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary"
+          style={{
+            animation: "fade-in-up 0.8s ease-out, glow-pulse 3s ease-in-out infinite 1s",
+          }}
+        >
+          <Shield size={40} className="text-white" />
+        </div>
+
+        <h1
+          className="max-w-3xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl"
+          style={{ animation: "fade-in-up 0.8s ease-out 0.15s backwards" }}
+        >
+          AI-Powered Medical
+          <br />
+          <span className="bg-gradient-to-r from-primary to-info bg-clip-text text-transparent">
+            Billing Intelligence
+          </span>
+        </h1>
+
+        <p
+          className="mt-6 max-w-xl text-lg text-muted-foreground"
+          style={{ animation: "fade-in-up 0.8s ease-out 0.25s backwards" }}
+        >
+          Detect billing errors, overcharges, and compliance issues in seconds.
+          Protect your revenue with intelligent analysis.
+        </p>
+
+        <div
+          className="mt-10 flex flex-col gap-3 sm:flex-row"
+          style={{ animation: "fade-in-up 0.8s ease-out 0.35s backwards" }}
+        >
+          <Link href="/login">
+            <Button size="lg" className="w-full gap-2 sm:w-auto">
+              Sign in to Acuvera Enterprise
+            </Button>
+          </Link>
+          <Link href="/register">
+            <Button variant="outline" size="lg" className="w-full sm:w-auto">
+              Create account
+            </Button>
+          </Link>
+        </div>
+
+        {/* Feature pills */}
+        <div
+          className="mt-16 grid max-w-3xl gap-4 sm:grid-cols-3"
+          style={{ animation: "fade-in-up 0.8s ease-out 0.5s backwards" }}
+        >
+          {[
+            {
+              icon: FileSearch,
+              title: "Error Detection",
+              desc: "AI finds duplicates, upcoding, and compliance issues",
+            },
+            {
+              icon: DollarSign,
+              title: "Savings Insights",
+              desc: "Estimated recovery opportunities on every bill",
+            },
+            {
+              icon: Zap,
+              title: "Instant Analysis",
+              desc: "Upload a bill, get results in seconds",
+            },
+          ].map((f, i) => (
+            <div
+              key={f.title}
+              className="rounded-2xl border border-border bg-card/80 p-5 text-left backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:bg-card"
+              style={{
+                animation: `fade-in-up 0.8s ease-out ${0.55 + i * 0.1}s backwards`,
+              }}
+            >
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <f.icon size={18} className="text-primary" />
+              </div>
+              <h3 className="text-sm font-semibold text-foreground">{f.title}</h3>
+              <p className="mt-1 text-[13px] text-muted-foreground">{f.desc}</p>
             </div>
-            <Link href="/upload">
-              <Button className="gap-2">
-                <Upload size={15} />
-                Upload Bill
-              </Button>
+          ))}
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer
+        className="relative z-10 border-t border-border px-6 py-6 sm:px-12"
+        style={{ animation: "fade-in 0.8s ease-out 0.7s backwards" }}
+      >
+        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+          <p className="text-[12px] text-muted-foreground">
+            © {new Date().getFullYear()} Acuvera. All rights reserved.
+          </p>
+          <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
+            <Link href="/privacy" className="hover:text-foreground hover:underline">
+              Privacy Policy
+            </Link>
+            <Link href="/support" className="hover:text-foreground hover:underline">
+              Support
             </Link>
           </div>
         </div>
-
-        {/* KPIs */}
-        {loading ? (
-          <div className="grid gap-4 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="h-[130px] animate-pulse rounded-2xl border border-border bg-card"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-4 lg:grid-cols-4">
-            <KPICard
-              title="Bills Analyzed"
-              value={totalBills.toLocaleString()}
-              icon={<FileSearch size={16} />}
-            />
-            <KPICard
-              title="Issues Found"
-              value={totalFindings.toLocaleString()}
-              icon={<AlertTriangle size={16} />}
-            />
-            <KPICard
-              title="Potential Savings"
-              value={formatCurrency(totalSavings)}
-              icon={<DollarSign size={16} />}
-            />
-            <KPICard
-              title="Review Rate"
-              value={`${reviewRate.toFixed(0)}%`}
-              icon={<ShieldAlert size={16} />}
-            />
-          </div>
-        )}
-
-        {/* Recent Bills or Empty State */}
-        {!loading && bills.length === 0 ? (
-          <Card className="flex flex-col items-center py-16 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
-              <FileSearch size={24} className="text-muted-foreground" />
-            </div>
-            <h3 className="text-base font-semibold text-foreground">
-              No bills analyzed yet
-            </h3>
-            <p className="mt-1 max-w-sm text-[13px] text-muted-foreground">
-              Upload your first medical bill to see AI-powered analysis,
-              error detection, and savings recommendations here.
-            </p>
-            <Link href="/upload" className="mt-6">
-              <Button className="gap-2">
-                <Upload size={15} />
-                Upload your first bill
-              </Button>
-            </Link>
-          </Card>
-        ) : !loading && bills.length > 0 ? (
-          <Card className="overflow-hidden p-0">
-            <div className="flex items-center justify-between border-b border-border px-6 py-4">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">
-                  Recent Bills
-                </h3>
-                <p className="text-[12px] text-muted-foreground">
-                  Your latest uploaded medical bills
-                </p>
-              </div>
-              <Link href="/claims">
-                <Button variant="ghost" className="gap-1 text-[13px]">
-                  View all <ArrowRight size={14} />
-                </Button>
-              </Link>
-            </div>
-            <div className="divide-y divide-border">
-              {recentBills.map((bill) => (
-                <Link
-                  key={bill.id}
-                  href={`/claims/${bill.id}`}
-                  className="flex items-center justify-between px-6 py-3.5 transition-colors duration-150 hover:bg-muted/50"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium text-foreground">
-                      {bill.file_name}
-                    </p>
-                    <p className="text-[12px] text-muted-foreground">
-                      {bill.uploaded_at
-                        ? formatDate(bill.uploaded_at)
-                        : "Recently uploaded"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {bill.findings_count > 0 && (
-                      <span className="text-[13px] font-medium text-success">
-                        {formatCurrency(bill.estimated_savings)}
-                      </span>
-                    )}
-                    <Badge
-                      variant={
-                        bill.status === "COMPLETED"
-                          ? "success"
-                          : bill.status === "FAILED"
-                            ? "destructive"
-                            : "neutral"
-                      }
-                    >
-                      {bill.status === "COMPLETED"
-                        ? "Analyzed"
-                        : bill.status === "PROCESSING"
-                          ? "Processing"
-                          : bill.status === "FAILED"
-                            ? "Failed"
-                            : "Pending"}
-                    </Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </Card>
-        ) : null}
-      </DashboardLayout>
-    </Protected>
+      </footer>
+    </div>
   );
 }

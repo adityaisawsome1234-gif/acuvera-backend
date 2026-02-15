@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { clearAuth, getUser } from "@/lib/auth";
 
 const navItems = [
-  { name: "Dashboard", path: "/", icon: LayoutDashboard },
+  { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "Upload Bill", path: "/upload", icon: Upload },
   { name: "Claims Review", path: "/claims", icon: FileSearch },
   { name: "Analytics", path: "/analytics", icon: BarChart3 },
@@ -60,10 +60,7 @@ export function Sidebar() {
         </p>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive =
-            item.path === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.path);
+          const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
           return (
             <Link
               key={item.path}

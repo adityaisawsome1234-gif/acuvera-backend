@@ -338,7 +338,7 @@ export default function SupportPolicyPage() {
             Privacy Policy
           </Link>
           <span>&middot;</span>
-          <Link href="/" className="hover:text-foreground hover:underline">
+          <Link href="/dashboard" className="hover:text-foreground hover:underline">
             Back to Dashboard
           </Link>
         </div>
