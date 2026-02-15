@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Shield } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { setToken, setUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -49,9 +48,9 @@ export default function LoginPage() {
       <div className="w-full max-w-[400px]">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-            <Shield size={24} className="text-white" />
-          </div>
+          <Link href="/" className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl">
+            <img src="/acuvera-logo.png" alt="Acuvera" width={56} height={56} className="rounded-xl object-contain" />
+          </Link>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Welcome back
           </h1>

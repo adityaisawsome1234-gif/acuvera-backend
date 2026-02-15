@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Shield,
   ArrowRight,
   FileCheck,
   Search,
@@ -55,12 +55,16 @@ export default function LandingPage() {
       {/* Header */}
       <header className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b px-6 py-4 transition-colors"
         style={{ background: "rgba(15,23,42,0.9)", borderColor: "rgba(255,255,255,0.06)" }}>
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ background: L.medicalBlue }}>
-            <Shield size={18} className="text-white" />
-          </div>
+        <Link href="/" className="flex items-center gap-3">
+          <img
+            src="/acuvera-logo.png"
+            alt="Acuvera"
+            width={36}
+            height={36}
+            className="rounded-lg object-contain"
+          />
           <span className="text-lg font-semibold tracking-tight">Acuvera</span>
-        </div>
+        </Link>
         <div className="flex items-center gap-3">
           <a href="#how-it-works" className="text-sm text-white/70 hover:text-white transition-colors">How it works</a>
           <Link
@@ -110,36 +114,20 @@ export default function LandingPage() {
             </a>
           </div>
         </div>
-        {/* Hero visual: animated dashboard mockup */}
+        {/* Hero visual: claims analysis dashboard */}
         <div
           ref={heroVis.ref}
-          className={`mt-16 rounded-xl border transition-all duration-1000 delay-200 ${heroVis.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
-          style={{
-            background: "linear-gradient(180deg, rgba(37,99,235,0.08) 0%, transparent 100%)",
-            borderColor: "rgba(255,255,255,0.08)",
-            padding: "24px",
-            minHeight: "280px",
-          }}
+          className={`relative mt-16 overflow-hidden rounded-xl border transition-all duration-1000 delay-200 ${heroVis.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+          style={{ borderColor: "rgba(255,255,255,0.08)" }}
         >
-          <div className="flex gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex-1 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", height: "180px" }} />
-            ))}
-          </div>
-          <div className="mt-4 flex gap-2">
-            {[40, 65, 85, 100].map((w, i) => (
-              <div
-                key={i}
-                className="h-2 rounded-full transition-all duration-700"
-                style={{
-                  width: `${w}%`,
-                  background: L.medicalBlue,
-                  opacity: heroVis.inView ? 0.6 : 0,
-                  transitionDelay: `${400 + i * 100}ms`,
-                }}
-              />
-            ))}
-          </div>
+          <Image
+            src="/acuvera-hero-dashboard.png"
+            alt="Acuvera claims analysis dashboard"
+            width={960}
+            height={400}
+            className="w-full object-cover object-top"
+            unoptimized
+          />
         </div>
       </section>
 
@@ -388,12 +376,16 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t py-8 px-6 sm:px-12 lg:px-24" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: L.medicalBlue }}>
-              <Shield size={14} className="text-white" />
-            </div>
+          <Link href="/" className="flex items-center gap-3">
+            <img
+              src="/acuvera-logo.png"
+              alt="Acuvera"
+              width={32}
+              height={32}
+              className="rounded-lg object-contain"
+            />
             <span className="text-sm font-medium">Acuvera</span>
-          </div>
+          </Link>
           <p className="text-sm" style={{ color: L.muted }}>
             © {new Date().getFullYear()} Acuvera. All rights reserved.
           </p>

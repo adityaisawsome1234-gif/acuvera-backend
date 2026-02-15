@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: "Acuvera | AI-Powered Medical Billing Intelligence",
   description:
     "Detect billing errors, prevent denials, and protect revenue with AI-powered medical bill analysis.",
+  icons: { icon: "/acuvera-logo.png" },
 };
 
 export default function RootLayout({

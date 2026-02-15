@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   LogOut,
   Settings,
-  Shield,
   Upload,
   User,
 } from "lucide-react";
@@ -37,11 +36,15 @@ export function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col border-r border-border bg-sidebar-background">
       {/* Logo */}
-      <div className="px-6 pb-4 pt-7">
+      <Link href="/dashboard" className="px-6 pb-4 pt-7">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Shield size={18} className="text-white" />
-          </div>
+          <img
+            src="/acuvera-logo.png"
+            alt="Acuvera"
+            width={36}
+            height={36}
+            className="rounded-lg object-contain"
+          />
           <div>
             <p className="text-[15px] font-semibold tracking-tight text-sidebar-accent-foreground">
               Acuvera
@@ -51,7 +54,7 @@ export function Sidebar() {
             </p>
           </div>
         </div>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 px-3 pt-2">
