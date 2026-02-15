@@ -130,6 +130,27 @@
   50% { transform: translateY(-6px); }
 }
 
+/* Landing page: enterprise healthcare palette */
+.landing {
+  --landing-navy: #0F172A;
+  --landing-medical-blue: #2563EB;
+  --landing-signal-blue: #4A90FF;
+  --landing-white: #FFFFFF;
+  --landing-soft-gray: #F8FAFC;
+  --landing-muted: #64748B;
+  --landing-border: #E2E8F0;
+}
+
+@keyframes line-draw {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes chart-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @layer components {
   .kpi-card {
     @apply rounded-2xl border border-border bg-card p-6 shadow-sm transition-all duration-200;

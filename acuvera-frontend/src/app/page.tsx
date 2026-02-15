@@ -1,174 +1,405 @@
 "use client";
 
 import Link from "next/link";
-import { Shield, FileSearch, DollarSign, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Shield,
+  ArrowRight,
+  FileCheck,
+  Search,
+  Lock,
+  TrendingUp,
+  ShieldCheck,
+  Activity,
+} from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useInView } from "@/hooks/use-in-view";
+
+const L = {
+  navy: "#0F172A",
+  medicalBlue: "#2563EB",
+  signalBlue: "#4A90FF",
+  white: "#FFFFFF",
+  softGray: "#F8FAFC",
+  muted: "#64748B",
+  border: "#E2E8F0",
+};
 
 export default function LandingPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const heroVis = useInView(0.1);
+  const problemVis = useInView(0.1);
+  const howVis = useInView(0.1);
+  const detectVis = useInView(0.1);
+  const impactVis = useInView(0.1);
+  const integrationVis = useInView(0.1);
+  const trustVis = useInView(0.1);
+  const ctaVis = useInView(0.2);
 
-  // If logged in, redirect to dashboard
   useEffect(() => {
-    if (!loading && user) {
-      router.replace("/dashboard");
-    }
+    if (!loading && user) router.replace("/dashboard");
   }, [user, loading, router]);
 
   if (loading || user) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center" style={{ background: L.navy }}>
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Animated gradient background */}
-      <div
-        className="pointer-events-none fixed inset-0 opacity-30"
-        style={{
-          background:
-            "linear-gradient(135deg, hsl(var(--primary) / 0.08) 0%, transparent 40%, hsl(var(--success) / 0.05) 60%, transparent 100%)",
-          backgroundSize: "200% 200%",
-          animation: "gradient-shift 12s ease infinite",
-        }}
-      />
-
+    <div className="landing min-h-screen" style={{ background: L.navy, color: L.white }}>
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-5 sm:px-12">
-        <div
-          className="flex items-center gap-3"
-          style={{ animation: "fade-in 0.6s ease-out" }}
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-            <Shield size={20} className="text-white" />
+      <header className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b px-6 py-4 transition-colors"
+        style={{ background: "rgba(15,23,42,0.9)", borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ background: L.medicalBlue }}>
+            <Shield size={18} className="text-white" />
           </div>
-          <div>
-            <p className="text-lg font-semibold tracking-tight text-foreground">
-              Acuvera
-            </p>
-            <p className="text-[11px] font-medium text-muted-foreground">
-              Billing Intelligence
-            </p>
-          </div>
+          <span className="text-lg font-semibold tracking-tight">Acuvera</span>
         </div>
-        <Link
-          href="/login"
-          style={{ animation: "fade-in 0.6s ease-out 0.2s backwards" }}
-        >
-          <Button variant="outline" size="sm" className="gap-2">
+        <div className="flex items-center gap-3">
+          <a href="#how-it-works" className="text-sm text-white/70 hover:text-white transition-colors">How it works</a>
+          <Link
+            href="/login"
+            className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
+            style={{ borderColor: "rgba(255,255,255,0.2)" }}
+          >
             Sign in
-          </Button>
-        </Link>
+          </Link>
+          <Link
+            href="/register"
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            style={{ background: L.medicalBlue, color: L.white }}
+          >
+            Request Demo
+          </Link>
+        </div>
       </header>
 
-      {/* Hero */}
-      <main className="relative z-10 flex flex-col items-center px-6 pt-16 pb-24 text-center sm:px-12 sm:pt-24">
-        {/* Logo with glow */}
+      {/* 1. Hero */}
+      <section className="relative pt-32 pb-24 px-6 sm:px-12 lg:px-24">
         <div
-          className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary"
+          ref={heroVis.ref}
+          className={`max-w-4xl transition-all duration-700 ${heroVis.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+        >
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl" style={{ color: L.white, lineHeight: 1.15 }}>
+            Stop Losing Revenue to Preventable Billing Errors.
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: L.muted }}>
+            AI that audits every claim before submission — catching costly mistakes, reducing denials,
+            and increasing reimbursement without disrupting clinical workflows.
+          </p>
+          <div className="mt-10 flex flex-wrap gap-4">
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-medium transition-opacity hover:opacity-90"
+              style={{ background: L.medicalBlue, color: L.white }}
+            >
+              Request Demo <ArrowRight size={16} />
+            </Link>
+            <a
+              href="#how-it-works"
+              className="inline-flex items-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium transition-colors hover:bg-white/5"
+              style={{ borderColor: "rgba(255,255,255,0.2)", color: L.white }}
+            >
+              See How It Works
+            </a>
+          </div>
+        </div>
+        {/* Hero visual: animated dashboard mockup */}
+        <div
+          ref={heroVis.ref}
+          className={`mt-16 rounded-xl border transition-all duration-1000 delay-200 ${heroVis.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
           style={{
-            animation: "fade-in-up 0.8s ease-out, glow-pulse 3s ease-in-out infinite 1s",
+            background: "linear-gradient(180deg, rgba(37,99,235,0.08) 0%, transparent 100%)",
+            borderColor: "rgba(255,255,255,0.08)",
+            padding: "24px",
+            minHeight: "280px",
           }}
         >
-          <Shield size={40} className="text-white" />
+          <div className="flex gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex-1 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", height: "180px" }} />
+            ))}
+          </div>
+          <div className="mt-4 flex gap-2">
+            {[40, 65, 85, 100].map((w, i) => (
+              <div
+                key={i}
+                className="h-2 rounded-full transition-all duration-700"
+                style={{
+                  width: `${w}%`,
+                  background: L.medicalBlue,
+                  opacity: heroVis.inView ? 0.6 : 0,
+                  transitionDelay: `${400 + i * 100}ms`,
+                }}
+              />
+            ))}
+          </div>
         </div>
+      </section>
 
-        <h1
-          className="max-w-3xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl"
-          style={{ animation: "fade-in-up 0.8s ease-out 0.15s backwards" }}
-        >
-          AI-Powered Medical
-          <br />
-          <span className="bg-gradient-to-r from-primary to-info bg-clip-text text-transparent">
-            Billing Intelligence
-          </span>
-        </h1>
-
-        <p
-          className="mt-6 max-w-xl text-lg text-muted-foreground"
-          style={{ animation: "fade-in-up 0.8s ease-out 0.25s backwards" }}
-        >
-          Detect billing errors, overcharges, and compliance issues in seconds.
-          Protect your revenue with intelligent analysis.
-        </p>
-
+      {/* 2. Problem */}
+      <section className="py-24 px-6 sm:px-12 lg:px-24" style={{ background: L.softGray, color: L.navy }}>
         <div
-          className="mt-10 flex flex-col gap-3 sm:flex-row"
-          style={{ animation: "fade-in-up 0.8s ease-out 0.35s backwards" }}
+          ref={problemVis.ref}
+          className={`mx-auto max-w-5xl transition-all duration-700 ${problemVis.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
         >
-          <Link href="/login">
-            <Button size="lg" className="w-full gap-2 sm:w-auto">
-              Sign in to Acuvera Enterprise
-            </Button>
-          </Link>
-          <Link href="/register">
-            <Button variant="outline" size="lg" className="w-full sm:w-auto">
-              Create account
-            </Button>
-          </Link>
-        </div>
-
-        {/* Feature pills */}
-        <div
-          className="mt-16 grid max-w-3xl gap-4 sm:grid-cols-3"
-          style={{ animation: "fade-in-up 0.8s ease-out 0.5s backwards" }}
-        >
-          {[
-            {
-              icon: FileSearch,
-              title: "Error Detection",
-              desc: "AI finds duplicates, upcoding, and compliance issues",
-            },
-            {
-              icon: DollarSign,
-              title: "Savings Insights",
-              desc: "Estimated recovery opportunities on every bill",
-            },
-            {
-              icon: Zap,
-              title: "Instant Analysis",
-              desc: "Upload a bill, get results in seconds",
-            },
-          ].map((f, i) => (
-            <div
-              key={f.title}
-              className="rounded-2xl border border-border bg-card/80 p-5 text-left backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:bg-card"
-              style={{
-                animation: `fade-in-up 0.8s ease-out ${0.55 + i * 0.1}s backwards`,
-              }}
-            >
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                <f.icon size={18} className="text-primary" />
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">The hidden loss in healthcare billing</h2>
+          <p className="mt-4 max-w-2xl text-lg" style={{ color: L.muted }}>
+            Most revenue loss is invisible until it&apos;s too late. Undercoding, denial-prone claims, and
+            documentation gaps drain 3–10% of revenue before claims ever reach the payer.
+          </p>
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Denials", value: "12–18%", desc: "of claims denied" },
+              { label: "Undercoding", value: "3–7%", desc: "revenue left behind" },
+              { label: "Rework cost", value: "$25+", desc: "per claim" },
+              { label: "Audit exposure", value: "High", desc: "compliance risk" },
+            ].map((item, i) => (
+              <div
+                key={item.label}
+                className="rounded-xl border bg-white p-6 transition-all duration-500"
+                style={{
+                  borderColor: L.border,
+                  opacity: problemVis.inView ? 1 : 0,
+                  transform: problemVis.inView ? "translateY(0)" : "translateY(12px)",
+                  transitionDelay: `${i * 80}ms`,
+                }}
+              >
+                <p className="text-2xl font-bold" style={{ color: L.medicalBlue }}>{item.value}</p>
+                <p className="mt-1 font-medium" style={{ color: L.navy }}>{item.label}</p>
+                <p className="mt-0.5 text-sm" style={{ color: L.muted }}>{item.desc}</p>
               </div>
-              <h3 className="text-sm font-semibold text-foreground">{f.title}</h3>
-              <p className="mt-1 text-[13px] text-muted-foreground">{f.desc}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* 3. How it works */}
+      <section id="how-it-works" className="py-24 px-6 sm:px-12 lg:px-24">
+        <div
+          ref={howVis.ref}
+          className={`mx-auto max-w-5xl transition-all duration-700 ${howVis.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+        >
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">How Acuvera works</h2>
+          <p className="mt-4 max-w-2xl text-lg" style={{ color: L.muted }}>
+            Pre-submission intelligence between EMR and clearinghouse — no workflow changes required.
+          </p>
+          <div className="mt-16 flex flex-col gap-12 lg:flex-row lg:justify-between">
+            {[
+              { icon: Activity, title: "Ingest", desc: "Connects to your billing workflow and receives claims before submission." },
+              { icon: Search, title: "Analyze", desc: "AI reviews every claim against payer rules, coding logic, and documentation." },
+              { icon: ShieldCheck, title: "Protect Revenue", desc: "Flags issues before submission. Fix once, avoid denials and rework." },
+            ].map((step, i) => (
+              <div key={step.title} className="flex-1">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ background: `${L.medicalBlue}20` }}>
+                    <step.icon size={22} style={{ color: L.medicalBlue }} />
+                  </div>
+                  <span className="text-sm font-medium" style={{ color: L.signalBlue }}>Step {i + 1}</span>
+                </div>
+                <h3 className="mt-4 text-xl font-semibold">{step.title}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed" style={{ color: L.muted }}>{step.desc}</p>
+              </div>
+            ))}
+          </div>
+          {howVis.inView && (
+            <div className="mt-12 flex items-center justify-center gap-4 opacity-60">
+              <div className="h-px w-16" style={{ background: L.signalBlue }} />
+              <ArrowRight size={20} style={{ color: L.signalBlue }} />
+              <div className="h-px w-16" style={{ background: L.signalBlue }} />
+              <ArrowRight size={20} style={{ color: L.signalBlue }} />
+              <div className="h-px w-16" style={{ background: L.signalBlue }} />
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 4. What Acuvera detects */}
+      <section className="py-24 px-6 sm:px-12 lg:px-24" style={{ background: "rgba(15,23,42,0.5)" }}>
+        <div
+          ref={detectVis.ref}
+          className={`mx-auto max-w-5xl transition-all duration-700 ${detectVis.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+        >
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">What Acuvera detects</h2>
+          <p className="mt-4 max-w-2xl text-lg" style={{ color: L.muted }}>
+            Comprehensive pre-submission checks across coding, documentation, and payer rules.
+          </p>
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              "Undercoding (lost revenue)",
+              "Overcoding risk (compliance exposure)",
+              "Missing documentation",
+              "Modifier misuse",
+              "Denial-prone claims",
+              "Payer rule mismatches",
+              "Audit risks",
+            ].map((item, i) => (
+              <div
+                key={item}
+                className="flex items-center gap-4 rounded-xl border p-5 transition-all duration-500"
+                style={{
+                  borderColor: "rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.02)",
+                  opacity: detectVis.inView ? 1 : 0,
+                  transform: detectVis.inView ? "translateY(0)" : "translateY(12px)",
+                  transitionDelay: `${i * 60}ms`,
+                }}
+              >
+                <FileCheck size={18} style={{ color: L.signalBlue }} />
+                <span className="text-[15px] font-medium">{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 5. Financial impact */}
+      <section className="py-24 px-6 sm:px-12 lg:px-24" style={{ background: L.softGray, color: L.navy }}>
+        <div
+          ref={impactVis.ref}
+          className={`mx-auto max-w-5xl transition-all duration-700 ${impactVis.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+        >
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Measurable outcomes</h2>
+          <p className="mt-4 max-w-2xl text-lg" style={{ color: L.muted }}>
+            Performance-based. Acuvera succeeds when captured revenue increases.
+          </p>
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: TrendingUp, label: "Increased net collections" },
+              { icon: Search, label: "Reduced denial rates" },
+              { icon: Activity, label: "Lower rework costs" },
+              { icon: Lock, label: "Audit protection" },
+              { icon: Activity, label: "Faster reimbursement cycles" },
+            ].map((item, i) => (
+              <div
+                key={item.label}
+                className="flex items-center gap-4 rounded-xl border bg-white p-5 transition-all duration-500"
+                style={{
+                  borderColor: L.border,
+                  opacity: impactVis.inView ? 1 : 0,
+                  transform: impactVis.inView ? "translateY(0)" : "translateY(12px)",
+                  transitionDelay: `${i * 80}ms`,
+                }}
+              >
+                <item.icon size={20} style={{ color: L.medicalBlue }} />
+                <span className="font-medium">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Integration */}
+      <section className="py-24 px-6 sm:px-12 lg:px-24">
+        <div
+          ref={integrationVis.ref}
+          className={`mx-auto max-w-5xl transition-all duration-700 ${integrationVis.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+        >
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Built for your stack</h2>
+          <p className="mt-4 max-w-2xl text-lg" style={{ color: L.muted }}>
+            Works alongside EMR, clearinghouse, and RCM workflows. Infrastructure, not another tool.
+          </p>
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-6 rounded-2xl border p-12"
+            style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.02)" }}>
+            <div className="rounded-xl px-6 py-3" style={{ background: "rgba(255,255,255,0.06)" }}>EMR</div>
+            <ArrowRight size={24} style={{ color: L.muted }} />
+            <div className="rounded-xl px-6 py-3" style={{ background: L.medicalBlue, color: L.white }}>Acuvera</div>
+            <ArrowRight size={24} style={{ color: L.muted }} />
+            <div className="rounded-xl px-6 py-3" style={{ background: "rgba(255,255,255,0.06)" }}>Clearinghouse</div>
+            <ArrowRight size={24} style={{ color: L.muted }} />
+            <div className="rounded-xl px-6 py-3" style={{ background: "rgba(255,255,255,0.06)" }}>RCM</div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Trust */}
+      <section className="py-24 px-6 sm:px-12 lg:px-24" style={{ background: "rgba(15,23,42,0.5)" }}>
+        <div
+          ref={trustVis.ref}
+          className={`mx-auto max-w-5xl transition-all duration-700 ${trustVis.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+        >
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Enterprise-grade security</h2>
+          <p className="mt-4 max-w-2xl text-lg" style={{ color: L.muted }}>
+            Built for healthcare financial accuracy. Designed to align with compliance standards.
+          </p>
+          <div className="mt-12 grid gap-6 sm:grid-cols-3">
+            {[
+              "Secure data handling",
+              "Compliance-aligned design",
+              "Enterprise deployment ready",
+            ].map((item, i) => (
+              <div
+                key={item}
+                className="flex items-center gap-4 rounded-xl border p-5"
+                style={{
+                  borderColor: "rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.02)",
+                  opacity: trustVis.inView ? 1 : 0,
+                  transform: trustVis.inView ? "translateY(0)" : "translateY(12px)",
+                  transition: "all 0.5s ease",
+                  transitionDelay: `${i * 80}ms`,
+                }}
+              >
+                <ShieldCheck size={20} style={{ color: L.signalBlue }} />
+                <span className="font-medium">{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 8. Closing CTA */}
+      <section className="py-24 px-6 sm:px-12 lg:px-24" style={{ background: L.softGray, color: L.navy }}>
+        <div
+          ref={ctaVis.ref}
+          className={`mx-auto max-w-2xl text-center transition-all duration-700 ${ctaVis.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+        >
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Revenue integrity should be automatic.
+          </h2>
+          <p className="mt-4 text-lg" style={{ color: L.muted }}>
+            Schedule a demo and see how Acuvera fits into your revenue cycle.
+          </p>
+          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-2 rounded-lg px-8 py-4 text-base font-medium transition-opacity hover:opacity-90"
+              style={{ background: L.medicalBlue, color: L.white }}
+            >
+              Schedule a Demo
+            </Link>
+            <Link
+              href="/login"
+              className="text-base font-medium transition-colors hover:opacity-80"
+              style={{ color: L.medicalBlue }}
+            >
+              Sign in to Acuvera
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer
-        className="relative z-10 border-t border-border px-6 py-6 sm:px-12"
-        style={{ animation: "fade-in 0.8s ease-out 0.7s backwards" }}
-      >
-        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <p className="text-[12px] text-muted-foreground">
+      <footer className="border-t py-8 px-6 sm:px-12 lg:px-24" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 sm:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: L.medicalBlue }}>
+              <Shield size={14} className="text-white" />
+            </div>
+            <span className="text-sm font-medium">Acuvera</span>
+          </div>
+          <p className="text-sm" style={{ color: L.muted }}>
             © {new Date().getFullYear()} Acuvera. All rights reserved.
           </p>
-          <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
-            <Link href="/privacy" className="hover:text-foreground hover:underline">
-              Privacy Policy
-            </Link>
-            <Link href="/support" className="hover:text-foreground hover:underline">
-              Support
-            </Link>
+          <div className="flex items-center gap-6 text-sm" style={{ color: L.muted }}>
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link href="/support" className="hover:text-white transition-colors">Support</Link>
           </div>
         </div>
       </footer>
