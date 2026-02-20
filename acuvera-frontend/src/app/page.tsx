@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useInView } from "@/hooks/use-in-view";
+import { warmBackend } from "@/lib/warmup";
 
 const L = {
   navy: "#0F172A",
@@ -69,6 +70,7 @@ export default function LandingPage() {
           <a href="#how-it-works" className="text-sm text-white/70 hover:text-white transition-colors">How it works</a>
           <Link
             href="/login"
+            onMouseEnter={warmBackend}
             className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
             style={{ borderColor: "rgba(255,255,255,0.2)" }}
           >
@@ -76,6 +78,7 @@ export default function LandingPage() {
           </Link>
           <Link
             href="/register"
+            onMouseEnter={warmBackend}
             className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
             style={{ background: L.medicalBlue, color: L.white }}
           >

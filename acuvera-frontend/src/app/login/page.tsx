@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { setToken, setUser } from "@/lib/auth";
+import { warmBackend } from "@/lib/warmup";
+import { setToken, setUser, setFreshLogin } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,13 +14,25 @@ import { toast } from "sonner";
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  useEffect(() => {
+    warmBackend();
+    router.prefetch("/dashboard");
+  }, [router]);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState("Signing in...");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setLoadingMsg("Connecting...");
+
+    const timeout = setTimeout(() => setLoadingMsg("Waking up server..."), 3000);
     try {
+      await warmBackend();
+      clearTimeout(timeout);
+      setLoadingMsg("Verifying credentials...");
+
       const res = await apiFetch<{
         success: boolean;
         data: { access_token: string; token_type: string; user: any };
@@ -34,11 +47,13 @@ export default function LoginPage() {
 
       setToken(res.data.access_token);
       setUser(res.data.user);
+      setFreshLogin();
+      router.replace("/dashboard");
       toast.success("Welcome back!");
-      router.push("/dashboard");
     } catch (err: any) {
       toast.error(err?.message ?? "Login failed. Please check your credentials.");
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   }
@@ -96,7 +111,7 @@ export default function LoginPage() {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Signing in...
+                  {loadingMsg}
                 </span>
               ) : (
                 "Sign in"

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { apiFetch } from "@/lib/api";
-import { AuthUser, getToken, getUser, setUser, clearAuth } from "@/lib/auth";
+import { AuthUser, getToken, getUser, setUser, clearAuth, isFreshLogin } from "@/lib/auth";
 
 type AuthState = {
   user: AuthUser | null;
@@ -41,12 +41,16 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
-    // Validate in background but don't block rendering if we have cached user
     if (!didValidate.current) {
       didValidate.current = true;
+      // Skip /auth/me when we just logged in — saves a round trip
+      if (cachedUser && hasToken && isFreshLogin()) {
+        setState({ user: cachedUser, loading: false });
+        return;
+      }
       refresh();
     }
-  }, [refresh]);
+  }, [refresh, cachedUser, hasToken]);
 
   return { ...state, refresh };
 }

@@ -12,6 +12,8 @@ from app.api.v1.ai import ai_router
 from app.api.v1.mobile import router as mobile_router
 from app.schemas.common import ErrorResponse
 import os
+import asyncio
+import httpx
 
 app = FastAPI(
     title="Acuvera API",
@@ -20,11 +22,25 @@ app = FastAPI(
 )
 
 
+async def _keep_alive():
+    """Self-ping every 10 minutes to prevent Render free-tier cold starts."""
+    port = os.environ.get("PORT", "8000")
+    url = f"http://localhost:{port}/health"
+    async with httpx.AsyncClient() as client:
+        while True:
+            await asyncio.sleep(600)
+            try:
+                await client.get(url, timeout=5)
+            except Exception:
+                pass
+
 @app.on_event("startup")
-def on_startup():
-    """Create database tables and uploads directory on server start (not at import time)."""
+async def on_startup():
+    """Create database tables, uploads directory, and start keep-alive task."""
     Base.metadata.create_all(bind=engine)
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    if settings.ENVIRONMENT == "production":
+        asyncio.create_task(_keep_alive())
 
 # CORS middleware
 cors_origins = settings.CORS_ORIGINS.split(",") if settings.CORS_ORIGINS != "*" else ["*"]

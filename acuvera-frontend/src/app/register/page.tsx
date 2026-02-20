@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { setToken, setUser } from "@/lib/auth";
+import { warmBackend } from "@/lib/warmup";
+import { setToken, setUser, setFreshLogin } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,10 @@ import { toast } from "sonner";
 
 export default function RegisterPage() {
   const router = useRouter();
+  useEffect(() => {
+    warmBackend();
+    router.prefetch("/dashboard");
+  }, [router]);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,8 +50,9 @@ export default function RegisterPage() {
 
       setToken(res.data.access_token);
       setUser(res.data.user);
+      setFreshLogin();
+      router.replace("/dashboard");
       toast.success("Account created successfully!");
-      router.push("/dashboard");
     } catch (err: any) {
       toast.error(err?.message ?? "Registration failed");
     } finally {
