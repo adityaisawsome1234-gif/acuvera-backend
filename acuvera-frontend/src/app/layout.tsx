@@ -12,8 +12,21 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Acuvera | AI-Powered Medical Billing Intelligence",
   description:
-    "Detect billing errors, prevent denials, and protect revenue with AI-powered medical bill analysis.",
+    "Detect billing errors, prevent denials, and protect revenue with AI-powered medical bill analysis. Clarity in every medical bill.",
   icons: { icon: "/acuvera-logo.png" },
+  metadataBase: new URL("https://acuvera.co"),
+  openGraph: {
+    title: "Acuvera — AI-Powered Medical Billing Intelligence",
+    description: "Detect errors, reduce denials, and restore trust in healthcare payments.",
+    siteName: "Acuvera",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Acuvera — Clarity in Every Medical Bill",
+    description: "AI-powered billing intelligence for providers, patients, and revenue cycle teams.",
+  },
 };
 
 export default function RootLayout({
