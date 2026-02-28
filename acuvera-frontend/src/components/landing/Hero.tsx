@@ -63,10 +63,10 @@ export function Hero({ onDemo }: Props) {
               Request Demo <ArrowRight size={16} />
             </button>
             <Link
-              href="/upload"
+              href="/demo"
               className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-white/5"
             >
-              <Play size={14} /> Try Sample Bill
+              <Play size={14} /> Try Live Demo
             </Link>
           </motion.div>
 

@@ -61,6 +61,12 @@ export function Navbar({ onDemo }: Props) {
           </div>
           <div className="hidden items-center gap-3 md:flex">
             <Link
+              href="/demo"
+              className="rounded-lg px-4 py-2 text-[13px] font-medium text-[#4A90FF] transition hover:text-white"
+            >
+              Try Demo
+            </Link>
+            <Link
               href="/login"
               className="rounded-lg px-4 py-2 text-[13px] font-medium text-white/70 transition hover:text-white"
             >
@@ -105,6 +111,9 @@ export function Navbar({ onDemo }: Props) {
                   </a>
                 ))}
                 <div className="flex flex-col gap-2 pt-3">
+                  <Link href="/demo" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-[#4A90FF]">
+                    Try Demo
+                  </Link>
                   <Link href="/login" className="rounded-lg px-3 py-2.5 text-sm text-white/70">
                     Sign in
                   </Link>
