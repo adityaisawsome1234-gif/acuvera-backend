@@ -54,6 +54,9 @@ services:
         value: gpt-5-mini
       - key: AI_ALLOW_STUB
         value: "false"
+      # Pipeline: Stage 2 (BioBERT+PyCTAKES) improves accuracy
+      - key: CODE_VALIDATION_ENABLED
+        value: "true"
       
       # Email Configuration (REQUIRED: Set in Render dashboard)
       - key: SMTP_HOST
@@ -116,6 +119,8 @@ services:
         value: gpt-5-mini
       - key: AI_ALLOW_STUB
         value: "false"
+      - key: CODE_VALIDATION_ENABLED
+        value: "true"
       
       # Monitoring (Optional)
       - key: SENTRY_DSN

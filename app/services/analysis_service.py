@@ -156,20 +156,22 @@ class AnalysisService:
             print(f"[Analysis] Bill {bill_id}: Text extraction failed: {e}", flush=True)
 
         if bill_text and len(bill_text.strip()) >= 50:
-            print(f"[Analysis] Bill {bill_id}: Using text-based analysis ({len(bill_text)} chars)", flush=True)
+            print(f"[Analysis] Bill {bill_id}: Stage 1 GPT (text) — {len(bill_text)} chars", flush=True)
             ai_result = ai_service.analyze_bill_text(bill_text)
         else:
             # Strategy 2: Use vision (renders PDF/image to base64 and sends to GPT-4o)
-            print(f"[Analysis] Bill {bill_id}: Text too short ({len(bill_text)} chars), using vision analysis", flush=True)
+            print(f"[Analysis] Bill {bill_id}: Stage 1 GPT (vision) — text too short ({len(bill_text)} chars)", flush=True)
             images = get_file_as_base64_images(bill.file_path, max_pages=3)
             if not images:
                 raise ValueError("Could not convert file to images for vision analysis")
             ai_result = ai_service.analyze_bill_images(images)
+            # Rebuild bill_text from GPT result so Stage 2 has content to validate
+            bill_text = self._build_text_from_ai_result(ai_result)
+            print(f"[Analysis] Bill {bill_id}: Rebuilt {len(bill_text)} chars from GPT for Stage 2", flush=True)
 
         print(
-            f"[Analysis] Bill {bill_id}: AI returned "
+            f"[Analysis] Bill {bill_id}: Stage 1 done — "
             f"{len(ai_result.get('detected_issues', []))} issues, "
-            f"risk_score={ai_result.get('risk_score', 0)}, "
             f"{len(ai_result.get('line_items', []))} line items",
             flush=True,
         )
@@ -177,6 +179,7 @@ class AnalysisService:
         # Stage 2: Local NLP validation (BioBERT + PyCTAKES)
         entities = None
         code_validation = None
+        stage2_ran = False
         if settings.CODE_VALIDATION_ENABLED:
             try:
                 print(f"[Analysis] Bill {bill_id}: Running local NLP validation...", flush=True)
@@ -194,21 +197,25 @@ class AnalysisService:
 
                 validator = CodeValidationService()
                 code_validation = validator.validate(ai_result, entities)
+                stage2_ran = True
                 print(
-                    f"[Analysis] Bill {bill_id}: PyCTAKES found "
+                    f"[Analysis] Bill {bill_id}: Stage 2 done — "
                     f"{len(code_validation.issues)} code issues, "
-                    f"{len(code_validation.validated_codes)} validated codes",
+                    f"{len(code_validation.validated_codes)} validated",
                     flush=True,
                 )
             except Exception as e:
-                print(f"[Analysis] Bill {bill_id}: Local NLP validation failed (non-fatal): {e}", flush=True)
+                print(f"[Analysis] Bill {bill_id}: Stage 2 FAILED (non-fatal): {e}", flush=True)
                 traceback.print_exc()
+        else:
+            print(f"[Analysis] Bill {bill_id}: Stage 2 SKIPPED (CODE_VALIDATION_ENABLED=false)", flush=True)
 
         # Stage 3: MedGemma clinical validation (Vertex AI)
         medgemma_out = None
+        stage3_ran = False
         if settings.MEDICAL_PIPELINE_ENABLED and settings.GCP_PROJECT_ID and settings.MEDGEMMA_ENDPOINT_ID:
             try:
-                print(f"[Analysis] Bill {bill_id}: Running MedGemma clinical validation...", flush=True)
+                print(f"[Analysis] Bill {bill_id}: Stage 3 MedGemma...", flush=True)
                 from app.services.medical_model_service import MedicalModelService
                 from app.services.biobert_service import ExtractionResult
                 from app.services.code_validation_service import ValidationResult as CodeValResult
@@ -220,27 +227,62 @@ class AnalysisService:
                     entities or ExtractionResult(),
                     code_validation or CodeValResult(),
                 )
+                stage3_ran = bool(medgemma_out)
                 print(
-                    f"[Analysis] Bill {bill_id}: MedGemma validation "
-                    f"{'succeeded' if medgemma_out else 'returned no results'}",
+                    f"[Analysis] Bill {bill_id}: Stage 3 done — "
+                    f"{'succeeded' if medgemma_out else 'no results'}",
                     flush=True,
                 )
             except Exception as e:
-                print(f"[Analysis] Bill {bill_id}: MedGemma validation failed (non-fatal): {e}", flush=True)
+                print(f"[Analysis] Bill {bill_id}: Stage 3 FAILED (non-fatal): {e}", flush=True)
                 traceback.print_exc()
+        else:
+            print(
+                f"[Analysis] Bill {bill_id}: Stage 3 SKIPPED "
+                f"(MEDICAL_PIPELINE_ENABLED={settings.MEDICAL_PIPELINE_ENABLED}, "
+                f"GCP={bool(settings.GCP_PROJECT_ID)}, endpoint={bool(settings.MEDGEMMA_ENDPOINT_ID)})",
+                flush=True,
+            )
 
         # Consensus merge
         if code_validation or medgemma_out:
             from app.services.consensus import merge_results
+            before_count = len(ai_result.get("detected_issues", []))
             ai_result = merge_results(ai_result, code_validation, medgemma_out)
+            after_count = len(ai_result.get("detected_issues", []))
             print(
-                f"[Analysis] Bill {bill_id}: Consensus complete — "
-                f"{len(ai_result.get('detected_issues', []))} enriched issues",
+                f"[Analysis] Bill {bill_id}: Consensus — {before_count} -> {after_count} issues",
                 flush=True,
             )
 
+        # Pipeline summary
+        stages = ["GPT"]
+        if stage2_ran:
+            stages.append("BioBERT+PyCTAKES")
+        if stage3_ran:
+            stages.append("MedGemma")
+        print(
+            f"[Analysis] Bill {bill_id}: PIPELINE COMPLETE — stages: {' -> '.join(stages)}, "
+            f"final issues: {len(ai_result.get('detected_issues', []))}",
+            flush=True,
+        )
+
         # Convert AI result to database records
         return self._save_ai_results(bill_id, ai_result)
+
+    def _build_text_from_ai_result(self, ai_result: Dict[str, Any]) -> str:
+        """Build bill text from GPT result for Stage 2 when vision was used."""
+        parts = []
+        if ai_result.get("summary"):
+            parts.append(ai_result["summary"])
+        for item in ai_result.get("line_items", []):
+            desc = item.get("description", "")
+            code = item.get("code", "")
+            price = item.get("total_price", item.get("unit_price", 0))
+            parts.append(f"{desc} {code} {price}".strip())
+        for issue in ai_result.get("detected_issues", []):
+            parts.append(issue.get("description", ""))
+        return "\n".join(p for p in parts if p)
 
     # ── Save AI results to DB ─────────────────────────────────
 

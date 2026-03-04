@@ -122,3 +122,30 @@ async def health_check():
         }
     }
 
+
+@app.get("/api/v1/pipeline-status")
+async def pipeline_status():
+    """Report which analysis pipeline stages are active (for debugging)."""
+    from app.core.config import settings
+    stage2_ready = settings.CODE_VALIDATION_ENABLED
+    stage3_ready = bool(
+        settings.MEDICAL_PIPELINE_ENABLED
+        and settings.GCP_PROJECT_ID
+        and settings.MEDGEMMA_ENDPOINT_ID
+    )
+    return {
+        "success": True,
+        "data": {
+            "stage1_gpt": "always",
+            "stage2_biobert_pyctakes": "enabled" if stage2_ready else "disabled",
+            "stage3_medgemma": "enabled" if stage3_ready else "disabled",
+            "consensus": "enabled" if (stage2_ready or stage3_ready) else "disabled",
+            "flags": {
+                "CODE_VALIDATION_ENABLED": settings.CODE_VALIDATION_ENABLED,
+                "MEDICAL_PIPELINE_ENABLED": settings.MEDICAL_PIPELINE_ENABLED,
+                "GCP_PROJECT_ID_set": bool(settings.GCP_PROJECT_ID),
+                "MEDGEMMA_ENDPOINT_ID_set": bool(settings.MEDGEMMA_ENDPOINT_ID),
+            },
+        },
+    }
+
