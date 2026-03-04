@@ -1,54 +1,29 @@
-"use client";
+import { Navigation } from '@/components/sections/navigation'
+import { Hero } from '@/components/sections/hero'
+import { ProductDemo } from '@/components/sections/product-demo'
+import { HowItWorks } from '@/components/sections/how-it-works'
+import { Features } from '@/components/sections/features'
+import { AIEngine } from '@/components/sections/ai-engine'
+import { Trust } from '@/components/sections/trust'
+import { Pricing } from '@/components/sections/pricing'
+import { Enterprise } from '@/components/sections/enterprise'
+import { FinalCTA } from '@/components/sections/final-cta'
+import { Footer } from '@/components/sections/footer'
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
-import { warmBackend } from "@/lib/warmup";
-
-import { Navbar } from "@/components/landing/Navbar";
-import { Hero } from "@/components/landing/Hero";
-import { ProblemSolution } from "@/components/landing/ProblemSolution";
-import { ProductPillars } from "@/components/landing/ProductPillars";
-import { HowItWorks } from "@/components/landing/HowItWorks";
-import { Security } from "@/components/landing/Security";
-import { Pricing } from "@/components/landing/Pricing";
-import { Outcomes } from "@/components/landing/Outcomes";
-import { FAQ } from "@/components/landing/FAQ";
-import { FinalCTA } from "@/components/landing/FinalCTA";
-import { Footer } from "@/components/landing/Footer";
-import { DemoModal } from "@/components/landing/DemoModal";
-
-export default function LandingPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const [demoOpen, setDemoOpen] = useState(false);
-
-  useEffect(() => {
-    if (!loading && user) router.replace("/dashboard");
-  }, [user, loading, router]);
-
-  if (loading || user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center" style={{ background: "#0F1117" }}>
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-      </div>
-    );
-  }
-
+export default function Home() {
   return (
-    <div className="min-h-screen bg-[#0F1117] text-white">
-      <Navbar onDemo={() => { warmBackend(); setDemoOpen(true); }} />
-      <Hero onDemo={() => { warmBackend(); setDemoOpen(true); }} />
-      <ProblemSolution />
-      <ProductPillars />
+    <main className="relative">
+      <Navigation />
+      <Hero />
+      <ProductDemo />
       <HowItWorks />
-      <Security />
-      <Outcomes />
-      <Pricing onDemo={() => setDemoOpen(true)} />
-      <FAQ />
-      <FinalCTA onDemo={() => setDemoOpen(true)} />
+      <Features />
+      <AIEngine />
+      <Trust />
+      <Pricing />
+      <Enterprise />
+      <FinalCTA />
       <Footer />
-      <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
-    </div>
-  );
+    </main>
+  )
 }
