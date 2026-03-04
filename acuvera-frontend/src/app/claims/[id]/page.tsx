@@ -195,6 +195,38 @@ export default function ClaimDetailPage() {
     0
   );
 
+  const handleReview = useCallback(
+    async (findingId: number, reviewStatus: string) => {
+      if (!bill) return;
+      try {
+        const res = await apiFetch<StandardResponse<Finding>>(
+          `/bills/${bill.id}/findings/${findingId}/review`,
+          {
+            method: "PATCH",
+            body: JSON.stringify({ status: reviewStatus }),
+          }
+        );
+        if (res.data) {
+          setBill((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              findings: prev.findings?.map((f) =>
+                f.id === findingId ? { ...f, ...res.data } : f
+              ),
+            };
+          });
+          toast.success(
+            `Finding ${reviewStatus.toLowerCase()} successfully.`
+          );
+        }
+      } catch (err) {
+        toast.error("Failed to submit review.");
+      }
+    },
+    [bill]
+  );
+
   return (
     <Protected>
       <DashboardLayout
@@ -418,7 +450,11 @@ export default function ClaimDetailPage() {
               ) : (
                 <div className="space-y-3">
                   {findings.map((finding) => (
-                    <FindingCard key={finding.id} finding={finding} />
+                    <FindingCard
+                      key={finding.id}
+                      finding={finding}
+                      onReview={handleReview}
+                    />
                   ))}
                 </div>
               )}
@@ -448,11 +484,18 @@ function categoryLabel(type: string): { label: string; color: string } {
   }
 }
 
-function FindingCard({ finding }: { finding: Finding }) {
+function FindingCard({
+  finding,
+  onReview,
+}: {
+  finding: Finding;
+  onReview: (id: number, status: string) => void;
+}) {
   const typeLabel = finding.type
     .replace(/_/g, " ")
     .replace(/\b\w/g, (l) => l.toUpperCase());
   const cat = categoryLabel(finding.type);
+  const reviewed = finding.review_status && finding.review_status !== "PENDING";
 
   return (
     <Card className="space-y-3">
@@ -471,7 +514,17 @@ function FindingCard({ finding }: { finding: Finding }) {
               <span className="text-[10px] text-muted-foreground">
                 {(finding.confidence * 100).toFixed(0)}% confidence
               </span>
+              {finding.model_agreement && (
+                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                  {finding.model_agreement}
+                </span>
+              )}
             </div>
+            {finding.validated_by && (
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Validated by: {finding.validated_by}
+              </p>
+            )}
           </div>
         </div>
         {finding.estimated_savings > 0 && (
@@ -496,6 +549,57 @@ function FindingCard({ finding }: { finding: Finding }) {
           </p>
         </div>
       )}
+
+      {/* Human-in-the-loop review */}
+      <div className="flex items-center justify-between border-t border-border pt-3">
+        {reviewed ? (
+          <div className="flex items-center gap-2">
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                finding.review_status === "ACCEPTED"
+                  ? "bg-success/10 text-success"
+                  : finding.review_status === "REJECTED"
+                    ? "bg-destructive/10 text-destructive"
+                    : "bg-warning/10 text-warning"
+              }`}
+            >
+              {finding.review_status === "ACCEPTED"
+                ? "Accepted"
+                : finding.review_status === "REJECTED"
+                  ? "Rejected"
+                  : "Escalated"}
+            </span>
+            {finding.review_note && (
+              <span className="text-[11px] text-muted-foreground">
+                — {finding.review_note}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onReview(finding.id, "ACCEPTED")}
+              className="rounded-lg border border-success/30 bg-success/5 px-3 py-1.5 text-[11px] font-medium text-success transition hover:bg-success/10"
+            >
+              <CheckCircle size={12} className="mr-1 inline" />
+              Accept
+            </button>
+            <button
+              onClick={() => onReview(finding.id, "REJECTED")}
+              className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-1.5 text-[11px] font-medium text-destructive transition hover:bg-destructive/10"
+            >
+              Reject
+            </button>
+            <button
+              onClick={() => onReview(finding.id, "ESCALATED")}
+              className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-1.5 text-[11px] font-medium text-warning transition hover:bg-warning/10"
+            >
+              Escalate
+            </button>
+          </div>
+        )}
+        <span className="text-[10px] text-muted-foreground">Review</span>
+      </div>
     </Card>
   );
 }

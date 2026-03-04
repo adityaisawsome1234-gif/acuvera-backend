@@ -33,6 +33,12 @@ class Finding(Base):
     explanation = Column(Text, nullable=False)
     recommended_action = Column(Text, nullable=False)
     line_item_id = Column(Integer, ForeignKey("line_items.id"), nullable=True)
+    model_agreement = Column(String(50), nullable=True)   # e.g. "3/3 models agree"
+    validated_by = Column(String(255), nullable=True)      # e.g. "GPT, PyCTAKES, MedGemma"
+    review_status = Column(String(20), nullable=True, default="PENDING")  # PENDING | ACCEPTED | REJECTED | ESCALATED
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    review_note = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

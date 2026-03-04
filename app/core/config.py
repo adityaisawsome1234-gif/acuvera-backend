@@ -50,6 +50,19 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-5-mini"
     
+    # Google Cloud Vertex AI (MedGemma clinical validation)
+    GCP_PROJECT_ID: Optional[str] = None
+    GCP_LOCATION: str = "us-central1"
+    MEDGEMMA_ENDPOINT_ID: Optional[str] = None
+    
+    # Local NLP models (BioBERT + PyCTAKES)
+    BIOBERT_MODEL: str = "dmis-lab/biobert-base-cased-v1.2"
+    CODE_VALIDATION_ENABLED: bool = True
+    
+    # Medical pipeline feature flag
+    MEDICAL_PIPELINE_ENABLED: bool = False
+    MEDICAL_MODEL_TIMEOUT: int = 30
+    
     # App
     DEBUG: bool = True
     ENVIRONMENT: str = "development"

@@ -174,6 +174,71 @@ class AnalysisService:
             flush=True,
         )
 
+        # Stage 2: Local NLP validation (BioBERT + PyCTAKES)
+        entities = None
+        code_validation = None
+        if settings.CODE_VALIDATION_ENABLED:
+            try:
+                print(f"[Analysis] Bill {bill_id}: Running local NLP validation...", flush=True)
+                from app.services.biobert_service import BioBERTService
+                from app.services.code_validation_service import CodeValidationService
+
+                biobert = BioBERTService()
+                entities = biobert.extract_entities(bill_text)
+                print(
+                    f"[Analysis] Bill {bill_id}: BioBERT extracted "
+                    f"{len(entities.cpt_codes)} CPT, {len(entities.icd_codes)} ICD, "
+                    f"{len(entities.entities)} total entities",
+                    flush=True,
+                )
+
+                validator = CodeValidationService()
+                code_validation = validator.validate(ai_result, entities)
+                print(
+                    f"[Analysis] Bill {bill_id}: PyCTAKES found "
+                    f"{len(code_validation.issues)} code issues, "
+                    f"{len(code_validation.validated_codes)} validated codes",
+                    flush=True,
+                )
+            except Exception as e:
+                print(f"[Analysis] Bill {bill_id}: Local NLP validation failed (non-fatal): {e}", flush=True)
+                traceback.print_exc()
+
+        # Stage 3: MedGemma clinical validation (Vertex AI)
+        medgemma_out = None
+        if settings.MEDICAL_PIPELINE_ENABLED and settings.GCP_PROJECT_ID and settings.MEDGEMMA_ENDPOINT_ID:
+            try:
+                print(f"[Analysis] Bill {bill_id}: Running MedGemma clinical validation...", flush=True)
+                from app.services.medical_model_service import MedicalModelService
+                from app.services.biobert_service import ExtractionResult
+                from app.services.code_validation_service import ValidationResult as CodeValResult
+
+                med_service = MedicalModelService()
+                medgemma_out = med_service.validate_clinical(
+                    ai_result,
+                    bill_text,
+                    entities or ExtractionResult(),
+                    code_validation or CodeValResult(),
+                )
+                print(
+                    f"[Analysis] Bill {bill_id}: MedGemma validation "
+                    f"{'succeeded' if medgemma_out else 'returned no results'}",
+                    flush=True,
+                )
+            except Exception as e:
+                print(f"[Analysis] Bill {bill_id}: MedGemma validation failed (non-fatal): {e}", flush=True)
+                traceback.print_exc()
+
+        # Consensus merge
+        if code_validation or medgemma_out:
+            from app.services.consensus import merge_results
+            ai_result = merge_results(ai_result, code_validation, medgemma_out)
+            print(
+                f"[Analysis] Bill {bill_id}: Consensus complete — "
+                f"{len(ai_result.get('detected_issues', []))} enriched issues",
+                flush=True,
+            )
+
         # Convert AI result to database records
         return self._save_ai_results(bill_id, ai_result)
 
@@ -272,6 +337,8 @@ class AnalysisService:
                 explanation=full_explanation,
                 recommended_action=recommended_action,
                 line_item_id=line_items[0].id if line_items else None,
+                model_agreement=issue.get("model_agreement"),
+                validated_by=issue.get("validated_by"),
             )
             self.db.add(finding)
             findings.append(finding)

@@ -38,6 +38,11 @@ async def _keep_alive():
 async def on_startup():
     """Create database tables, uploads directory, and start keep-alive task."""
     Base.metadata.create_all(bind=engine)
+    try:
+        from app.core.migrate import migrate_findings_review_columns
+        migrate_findings_review_columns()
+    except Exception as e:
+        print(f"[Startup] Migration skipped: {e}", flush=True)
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     if settings.ENVIRONMENT == "production":
         asyncio.create_task(_keep_alive())

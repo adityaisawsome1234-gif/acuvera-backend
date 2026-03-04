@@ -54,6 +54,12 @@ export type Finding = {
   explanation: string;
   recommended_action: string;
   line_item_id?: number;
+  model_agreement?: string;
+  validated_by?: string;
+  review_status?: string;
+  reviewed_by?: number;
+  reviewed_at?: string;
+  review_note?: string;
   created_at?: string;
 };
 

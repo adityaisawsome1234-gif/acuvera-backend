@@ -1,12 +1,15 @@
 import asyncio
 import traceback
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
 from app.api.middleware.auth import get_current_active_user
 from app.models.user import User
+from app.models.finding import Finding
 from app.schemas.bill import BillResponse, BillListResponse
+from app.schemas.finding import FindingReviewRequest
 from app.schemas.common import StandardResponse
 from app.services.bill_service import BillService
 
@@ -47,21 +50,7 @@ async def upload_bill(
             }
             for item in bill.line_items
         ]
-        bill_data["findings"] = [
-            {
-                "id": f.id,
-                "bill_id": f.bill_id,
-                "type": f.type.value,
-                "severity": f.severity.value,
-                "confidence": f.confidence,
-                "estimated_savings": f.estimated_savings,
-                "explanation": f.explanation,
-                "recommended_action": f.recommended_action,
-                "line_item_id": f.line_item_id,
-                "created_at": f.created_at.isoformat(),
-            }
-            for f in bill.findings
-        ]
+        bill_data["findings"] = [_serialize_finding(f) for f in bill.findings]
         bill_data["status"] = bill.status.value
 
         return StandardResponse(success=True, data=bill_data)
@@ -148,21 +137,7 @@ async def get_bill(
             }
             for item in bill.line_items
         ]
-        bill_data["findings"] = [
-            {
-                "id": f.id,
-                "bill_id": f.bill_id,
-                "type": f.type.value,
-                "severity": f.severity.value,
-                "confidence": f.confidence,
-                "estimated_savings": f.estimated_savings,
-                "explanation": f.explanation,
-                "recommended_action": f.recommended_action,
-                "line_item_id": f.line_item_id,
-                "created_at": f.created_at.isoformat(),
-            }
-            for f in bill.findings
-        ]
+        bill_data["findings"] = [_serialize_finding(f) for f in bill.findings]
         bill_data["status"] = bill.status.value
 
         return StandardResponse(success=True, data=bill_data)
@@ -176,3 +151,58 @@ async def get_bill(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
+
+
+@router.patch("/{bill_id}/findings/{finding_id}/review")
+async def review_finding(
+    bill_id: int,
+    finding_id: int,
+    body: FindingReviewRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Accept, reject, or escalate a finding (human-in-the-loop review)."""
+    valid_statuses = {"ACCEPTED", "REJECTED", "ESCALATED"}
+    if body.status not in valid_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"status must be one of: {', '.join(valid_statuses)}",
+        )
+
+    finding = db.query(Finding).filter(
+        Finding.id == finding_id, Finding.bill_id == bill_id
+    ).first()
+
+    if not finding:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Finding not found")
+
+    finding.review_status = body.status
+    finding.reviewed_by = current_user.id
+    finding.reviewed_at = datetime.now(timezone.utc)
+    finding.review_note = body.note
+    db.commit()
+    db.refresh(finding)
+
+    return StandardResponse(success=True, data=_serialize_finding(finding))
+
+
+def _serialize_finding(f: Finding) -> dict:
+    """Serialize a Finding ORM object to a dict with all fields."""
+    return {
+        "id": f.id,
+        "bill_id": f.bill_id,
+        "type": f.type.value,
+        "severity": f.severity.value,
+        "confidence": f.confidence,
+        "estimated_savings": f.estimated_savings,
+        "explanation": f.explanation,
+        "recommended_action": f.recommended_action,
+        "line_item_id": f.line_item_id,
+        "model_agreement": f.model_agreement,
+        "validated_by": f.validated_by,
+        "review_status": f.review_status,
+        "reviewed_by": f.reviewed_by,
+        "reviewed_at": f.reviewed_at.isoformat() if f.reviewed_at else None,
+        "review_note": f.review_note,
+        "created_at": f.created_at.isoformat(),
+    }
