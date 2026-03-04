@@ -1,6 +1,7 @@
 import json
+import re
 from typing import Dict, Any, List
-from openai import OpenAI
+import anthropic
 from app.core.config import settings
 
 
@@ -77,7 +78,6 @@ Detect and clearly report:
 
 Step 1 — Parse
 Extract structured entities:
-
 * Codes
 * Charges
 * Dates
@@ -87,7 +87,6 @@ Extract structured entities:
 
 Step 2 — Validate
 Cross-check:
-
 * Internal consistency
 * Coding logic relationships
 * Financial arithmetic
@@ -95,7 +94,6 @@ Cross-check:
 
 Step 3 — Compare
 Evaluate against:
-
 * Known billing rules
 * Logical medical relationships
 * Expected billing structure
@@ -128,7 +126,7 @@ For each issue you find:
 5. Include line numbers or codes from the bill when referring to specific charges"""
 
 
-# ── Output schema for GPT (detailed, patient-friendly) ──
+# ── Output schema for Claude (detailed, patient-friendly) ──
 
 OUTPUT_SCHEMA = """{
   "summary": "2–3 sentence plain-language overview: what this bill is for, total amount, and the main issues or that it looks clean",
@@ -165,14 +163,14 @@ OUTPUT_SCHEMA = """{
 }"""
 
 
-class OpenAIService:
-    """Service for interacting with OpenAI API using Acuvera's detection prompt."""
+class AnthropicService:
+    """Service for interacting with Anthropic Claude API using Acuvera's detection prompt."""
 
     def __init__(self):
-        if not settings.OPENAI_API_KEY:
-            raise ValueError("OPENAI_API_KEY is not set.")
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        self.model = settings.OPENAI_MODEL  # e.g. "gpt-4o-mini"
+        if not settings.ANTHROPIC_API_KEY:
+            raise ValueError("ANTHROPIC_API_KEY is not set.")
+        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.model = settings.ANTHROPIC_MODEL  # e.g. "claude-3-5-sonnet-20241022"
 
     # ── Text-based analysis ───────────────────────────────────────
 
@@ -184,83 +182,103 @@ class OpenAIService:
             "Then perform the full error-detection analysis as instructed.\n\n"
             "Write each finding in DETAIL so a patient can understand exactly what was billed, "
             "what the issue is, and what to do next. Include specific amounts and line references.\n\n"
-            f"Return a JSON object matching this exact structure:\n{OUTPUT_SCHEMA}\n\n"
-            f"Bill text:\n{text}\n\n"
-            "Return ONLY valid JSON."
+            f"Return ONLY a JSON object matching this exact structure (do not include markdown formatting or backticks):\n{OUTPUT_SCHEMA}\n\n"
+            f"Bill text:\n{text}"
         )
 
         try:
-            response = self.client.chat.completions.create(
+            response = self.client.messages.create(
                 model=self.model,
+                system=SYSTEM_PROMPT,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt},
+                    {"role": "user", "content": prompt}
                 ],
-                response_format={"type": "json_object"},
                 temperature=0.15,
                 max_tokens=8192,
             )
-            return self._parse_response(response)
+            return self._parse_response(response.content[0].text)
         except Exception as e:
-            raise Exception(f"OpenAI text analysis error: {str(e)}")
+            raise Exception(f"Anthropic text analysis error: {str(e)}")
 
     # ── Vision-based analysis (scanned PDFs, images) ──────────────
 
     def analyze_bill_images(self, image_data_uris: List[str]) -> Dict[str, Any]:
         """
-        Analyze medical bill images using GPT-4o vision capability.
+        Analyze medical bill images using Claude 3.5 Sonnet vision capability.
 
         Args:
             image_data_uris: List of base64 data-URI strings
-                e.g. ["data:image/png;base64,iVBOR..."]
+                e.g. ["data:image/jpeg;base64,iVBOR..."]
         """
-        content: list = [
-            {
-                "type": "text",
-                "text": (
-                    "Analyze this medical bill image(s). "
-                    "Extract all line items, amounts, codes, dates, and provider information. "
-                    "Then perform the full error-detection analysis as instructed.\n\n"
-                    "Write each finding in DETAIL so a patient can understand exactly what was billed, "
-                    "what the issue is, and what to do next. Include specific amounts and line references.\n\n"
-                    f"Return a JSON object matching this exact structure:\n{OUTPUT_SCHEMA}\n\n"
-                    "Return ONLY valid JSON."
-                ),
-            }
-        ]
+        content: list = []
 
         for uri in image_data_uris:
-            content.append(
-                {
-                    "type": "image_url",
-                    "image_url": {"url": uri, "detail": "high"},
-                }
+            # Parse the data URI to get media type and base64 data
+            # Format: data:image/jpeg;base64,...
+            match = re.match(r"data:(image/[^;]+);base64,(.+)", uri)
+            if match:
+                media_type = match.group(1)
+                base64_data = match.group(2)
+                content.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": media_type,
+                        "data": base64_data,
+                    }
+                })
+
+        content.append({
+            "type": "text",
+            "text": (
+                "Analyze this medical bill image(s). "
+                "Extract all line items, amounts, codes, dates, and provider information. "
+                "Then perform the full error-detection analysis as instructed.\n\n"
+                "Write each finding in DETAIL so a patient can understand exactly what was billed, "
+                "what the issue is, and what to do next. Include specific amounts and line references.\n\n"
+                f"Return ONLY a JSON object matching this exact structure (do not include markdown formatting or backticks):\n{OUTPUT_SCHEMA}"
             )
+        })
 
         try:
-            response = self.client.chat.completions.create(
+            response = self.client.messages.create(
                 model=self.model,
+                system=SYSTEM_PROMPT,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": content},
+                    {"role": "user", "content": content}
                 ],
-                response_format={"type": "json_object"},
                 temperature=0.15,
                 max_tokens=8192,
             )
-            return self._parse_response(response)
+            return self._parse_response(response.content[0].text)
         except Exception as e:
-            raise Exception(f"OpenAI vision analysis error: {str(e)}")
+            raise Exception(f"Anthropic vision analysis error: {str(e)}")
 
     # ── Response parsing ──────────────────────────────────────────
 
-    def _parse_response(self, response) -> Dict[str, Any]:
-        """Parse OpenAI response into a dictionary with guaranteed fields."""
-        content = response.choices[0].message.content
+    def _parse_response(self, text: str) -> Dict[str, Any]:
+        """Parse Claude response into a dictionary with guaranteed fields."""
+        # Strip potential markdown json formatting that Claude sometimes adds
+        text = text.strip()
+        if text.startswith("```json"):
+            text = text[7:]
+        elif text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+
+        # Find the first { and last } to extract JSON if there's conversational wrapper
+        start_idx = text.find("{")
+        end_idx = text.rfind("}")
+        
+        if start_idx != -1 and end_idx != -1 and end_idx >= start_idx:
+            text = text[start_idx:end_idx+1]
+
         try:
-            result = json.loads(content)
+            result = json.loads(text)
             if not isinstance(result, dict):
-                return {"raw": content}
+                return {"raw": text}
 
             # Ensure all required fields exist with defaults
             result.setdefault("summary", "")
@@ -286,4 +304,4 @@ class OpenAIService:
 
             return result
         except json.JSONDecodeError:
-            return {"raw": content}
+            return {"raw": text}

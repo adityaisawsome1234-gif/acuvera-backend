@@ -47,11 +47,11 @@ services:
       
       # AI Provider (REQUIRED: Set in Render dashboard)
       - key: AI_PROVIDER
-        value: openai
-      - key: OPENAI_API_KEY
+        value: anthropic
+      - key: ANTHROPIC_API_KEY
         sync: false
-      - key: OPENAI_MODEL
-        value: gpt-5-mini
+      - key: ANTHROPIC_MODEL
+        value: claude-3-5-sonnet-20241022
       - key: AI_ALLOW_STUB
         value: "false"
       # Pipeline: Stage 2 (BioBERT+PyCTAKES) improves accuracy
@@ -112,11 +112,11 @@ services:
       
       # AI Provider (same as API)
       - key: AI_PROVIDER
-        value: openai
-      - key: OPENAI_API_KEY
+        value: anthropic
+      - key: ANTHROPIC_API_KEY
         sync: false
-      - key: OPENAI_MODEL
-        value: gpt-5-mini
+      - key: ANTHROPIC_MODEL
+        value: claude-3-5-sonnet-20241022
       - key: AI_ALLOW_STUB
         value: "false"
       - key: CODE_VALIDATION_ENABLED

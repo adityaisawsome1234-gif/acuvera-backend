@@ -46,9 +46,9 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
     
-    # OpenAI (gpt-5-mini = fast + cost-efficient; gpt-5 = higher accuracy)
-    OPENAI_API_KEY: Optional[str] = None
-    OPENAI_MODEL: str = "gpt-5-mini"
+    # Anthropic (Claude 3.5 Sonnet)
+    ANTHROPIC_API_KEY: Optional[str] = None
+    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20241022"
     
     # Google Cloud Vertex AI (MedGemma clinical validation)
     GCP_PROJECT_ID: Optional[str] = None

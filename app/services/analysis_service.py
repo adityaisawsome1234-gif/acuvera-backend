@@ -94,7 +94,7 @@ class AnalysisService:
             self.bill_repo.update(bill)
 
             result = None
-            use_ai = bool(settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.strip())
+            use_ai = bool(settings.ANTHROPIC_API_KEY and settings.ANTHROPIC_API_KEY.strip())
 
             if use_ai:
                 try:
@@ -141,11 +141,11 @@ class AnalysisService:
     # ── AI analysis ────────────────────────────────────────────
 
     def _analyze_with_ai(self, bill_id: int, bill) -> dict:
-        """Analyze bill using OpenAI with comprehensive error detection prompt."""
-        from app.services.openai_service import OpenAIService
+        """Analyze bill using Claude with comprehensive error detection prompt."""
+        from app.services.anthropic_service import AnthropicService
         from app.utils.file_upload import extract_text_from_file, get_file_as_base64_images
 
-        ai_service = OpenAIService()
+        ai_service = AnthropicService()
         ai_result: Dict[str, Any] = {}
 
         # Strategy 1: Try text extraction from PDF
@@ -165,9 +165,9 @@ class AnalysisService:
             if not images:
                 raise ValueError("Could not convert file to images for vision analysis")
             ai_result = ai_service.analyze_bill_images(images)
-            # Rebuild bill_text from GPT result so Stage 2 has content to validate
+            # Rebuild bill_text from Claude result so Stage 2 has content to validate
             bill_text = self._build_text_from_ai_result(ai_result)
-            print(f"[Analysis] Bill {bill_id}: Rebuilt {len(bill_text)} chars from GPT for Stage 2", flush=True)
+            print(f"[Analysis] Bill {bill_id}: Rebuilt {len(bill_text)} chars from Claude for Stage 2", flush=True)
 
         print(
             f"[Analysis] Bill {bill_id}: Stage 1 done — "
@@ -256,7 +256,7 @@ class AnalysisService:
             )
 
         # Pipeline summary
-        stages = ["GPT"]
+        stages = ["Claude"]
         if stage2_ran:
             stages.append("BioBERT+PyCTAKES")
         if stage3_ran:
