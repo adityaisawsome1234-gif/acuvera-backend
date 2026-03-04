@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from app.schemas.ai import AnalyzeRequest, AnalyzeResult
 from app.schemas.common import StandardResponse
-from app.services.openai_service import OpenAIService
+from app.services.anthropic_service import AnthropicService
 
 router = APIRouter()
 
@@ -9,8 +9,8 @@ router = APIRouter()
 @router.post("/analyze", response_model=StandardResponse[AnalyzeResult])
 async def analyze_bill_text(request: AnalyzeRequest):
     """
-    Analyze medical bill text using OpenAI.
-    
+    Analyze medical bill text using Anthropic Claude.
+
     Accepts bill text and returns structured analysis including:
     - Summary of the bill
     - List of issues found
@@ -18,9 +18,9 @@ async def analyze_bill_text(request: AnalyzeRequest):
     - Confidence score
     """
     try:
-        service = OpenAIService()
+        service = AnthropicService()
         result = service.analyze_bill_text(request.text)
-        
+
         return StandardResponse(
             success=True,
             data=AnalyzeResult(result=result)
