@@ -1,0 +1,12 @@
+[package]
+name = "acuvera-desktop"
+version = "0.1.0"
+description = "Acuvera Enterprise desktop wrapper"
+authors = ["Acuvera"]
+edition = "2021"
+
+[dependencies]
+tauri = { version = "1.6.0", features = ["shell-open"] }
+
+[build-dependencies]
+tauri-build = { version = "1.6.0" }

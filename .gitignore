@@ -44,6 +44,10 @@ apps/desktop/src-tauri/.tauri/
 # Uploads
 uploads/*
 !uploads/.gitkeep
+uploads_test/
+
+# Test cache
+.pytest_cache/
 
 # Database
 *.db

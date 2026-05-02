@@ -1,141 +1,49 @@
-# Acuvera Backend - Quick Start Guide
+# Acuvera Enterprise - Quick Start
 
-## 🚀 Getting Started
-
-### 1. Install Dependencies
+## 1) Install Dependencies
 ```bash
-cd acuvera-backend
 pip install -r requirements.txt
+npm install
 ```
 
-### 2. Configure Environment
+## 2) Configure Environment
 ```bash
 cp .env.example .env
-# Edit .env with your database URL
-# Set DEMO_MODE=true for fast demo results
 ```
 
-### 3. Set Up Database
-The app will create tables automatically on first run. For production, use Alembic:
+## 3) Start Postgres + Redis
 ```bash
-alembic init migrations
-alembic revision --autogenerate -m "Initial migration"
-alembic upgrade head
+docker compose up
 ```
 
-### 4. Run the Server
+## 4) Run the API
 ```bash
-python run.py
-# Or: uvicorn app.main:app --reload
+uvicorn --app-dir apps/api app.main:app --reload
 ```
 
-Server will start at `http://localhost:8000`
-
-### 5. Seed Demo Data
+## 5) Run the RQ Worker
 ```bash
-# First, create an admin user manually or via register endpoint
-# Then call:
-curl -X POST http://localhost:8000/api/v1/admin/seed-demo \
-  -H "Authorization: Bearer <admin_token>"
+rq worker --url redis://localhost:6379/0
 ```
 
-## 📝 Demo Users (After Seeding)
-
-- **Patient**: `patient@demo.com` / `demo123`
-- **Provider**: `provider@demo.com` / `demo123`
-- **Admin**: `admin@demo.com` / `demo123`
-
-## 🧪 Testing the API
-
-### 1. Register a User
+## 6) Run the Web App
 ```bash
-curl -X POST http://localhost:8000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "password123",
-    "full_name": "Test User",
-    "role": "PATIENT"
-  }'
+npm run dev --workspace apps/web
 ```
 
-### 2. Login
+## 7) Seed the Default Org + Admin
 ```bash
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "password123"
-  }'
+python apps/api/scripts/seed.py
 ```
 
-Save the `access_token` from the response.
-
-### 3. Upload a Bill
+## 8) macOS Wrapper (Optional)
 ```bash
-curl -X POST http://localhost:8000/api/v1/bills/upload \
-  -H "Authorization: Bearer <access_token>" \
-  -F "file=@/path/to/bill.pdf"
+cd apps/desktop
+npm install
+npm run tauri dev
 ```
 
-### 4. Get Bill Details
-```bash
-curl http://localhost:8000/api/v1/bills/1 \
-  -H "Authorization: Bearer <access_token>"
-```
+## Useful URLs
 
-Wait 3-5 seconds after upload for analysis to complete (in DEMO_MODE).
-
-### 5. Get Provider Dashboard
-```bash
-curl http://localhost:8000/api/v1/provider/orgs/dashboard \
-  -H "Authorization: Bearer <provider_token>"
-```
-
-## 📚 API Documentation
-
-Once the server is running, visit:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-
-## 🔧 Configuration
-
-Key environment variables in `.env`:
-
-- `DATABASE_URL` - PostgreSQL connection string
-- `SECRET_KEY` - JWT secret key (change in production!)
-- `DEMO_MODE` - Set to `true` for fast, deterministic results
-- `MAX_FILE_SIZE_MB` - Max upload size (default: 10MB)
-- `UPLOAD_DIR` - Directory for file uploads (default: `./uploads`)
-
-## 🎯 Demo Flow
-
-1. **Patient uploads bill** → Status: PENDING
-2. **Background job processes** → Status: PROCESSING (3-5 seconds in DEMO_MODE)
-3. **Analysis completes** → Status: COMPLETED
-4. **Patient views results** → See line items and findings
-5. **Provider views dashboard** → See aggregated stats
-
-## ⚠️ Important Notes
-
-- DEMO_MODE ensures fast, repeatable results for demos
-- All responses follow standardized format (see ENDPOINTS.md)
-- RBAC ensures users only see their own data
-- File uploads are validated (PDF, JPG, PNG only)
-- Background jobs run in threads (upgrade to Celery for production)
-
-## 🐛 Troubleshooting
-
-**Database connection errors:**
-- Ensure PostgreSQL is running
-- Check DATABASE_URL in .env
-
-**Import errors:**
-- Ensure you're in the project root
-- Check Python path includes the project directory
-
-**File upload errors:**
-- Check file size (MAX_FILE_SIZE_MB)
-- Ensure file type is PDF, JPG, or PNG
-- Check uploads directory permissions
-
+- API docs: `http://localhost:8000/docs`
+- Web app: `http://localhost:3000`

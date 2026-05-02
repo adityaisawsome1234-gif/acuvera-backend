@@ -136,7 +136,7 @@ async def pipeline_status():
     return {
         "success": True,
         "data": {
-            "stage1_gpt": "always",
+            "stage1_claude": "always",
             "stage2_biobert_pyctakes": "enabled" if stage2_ready else "disabled",
             "stage3_medgemma": "enabled" if stage3_ready else "disabled",
             "consensus": "enabled" if (stage2_ready or stage3_ready) else "disabled",

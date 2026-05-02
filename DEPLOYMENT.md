@@ -1,34 +1,85 @@
 # Deployment Guide
 
-This guide covers multiple deployment options for the Acuvera backend.
+This guide covers multiple deployment options for the Acuvera Enterprise platform.
 
 ## Prerequisites
 
-- Python 3.11+
-- PostgreSQL database
-- Redis (for background jobs)
-- Environment variables configured
+- Docker and Docker Compose installed
+- PostgreSQL database (or use Docker Compose)
+- Redis (or use Docker Compose)
+- Domain name (for production)
+- SSL certificate (Let's Encrypt recommended)
 
-## Quick Start: Docker Compose (Easiest)
+## Quick Start: Automated Production Deployment
 
-The fastest way to get started is using Docker Compose:
+The fastest way to deploy to production:
 
 ```bash
-# 1. Copy environment file
+# 1. Generate secure secrets
+python3 scripts/generate-secrets.py
+
+# 2. Copy and configure environment
 cp .env.example .env
-# Edit .env with your settings
+# Edit .env with your production values (use generated secrets)
 
-# 2. Start all services
-docker-compose up -d
-
-# 3. Check status
-docker-compose ps
-
-# 4. View logs
-docker-compose logs -f web
+# 3. Run automated deployment script
+chmod +x scripts/deploy-production.sh
+./scripts/deploy-production.sh
 ```
 
-Your API will be available at `http://localhost:8000`
+The script will:
+- ✅ Validate all required environment variables
+- ✅ Build Docker images
+- ✅ Run database migrations
+- ✅ Start all services
+- ✅ Verify health checks
+
+## Production Deployment Checklist
+
+Before deploying, ensure you've completed all items:
+
+### 🔐 Security Configuration
+
+- [ ] Generated secure `SECRET_KEY` (run `python3 scripts/generate-secrets.py`)
+- [ ] Generated secure `NEXTAUTH_SECRET` (run `python3 scripts/generate-secrets.py`)
+- [ ] Set strong `POSTGRES_PASSWORD` in `.env`
+- [ ] Set `DEBUG=false` in `.env`
+- [ ] Set `ENVIRONMENT=production` in `.env`
+- [ ] Configured `CORS_ORIGINS` with your production domain(s)
+- [ ] Updated `FRONTEND_URL` to production URL
+- [ ] Updated `NEXTAUTH_URL` to production URL
+- [ ] Updated `NEXT_PUBLIC_API_BASE_URL` to production API URL
+
+### 📧 Email Configuration (Required)
+
+- [ ] Configured SMTP settings for email verification
+- [ ] Set `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`
+- [ ] Set `SMTP_FROM_EMAIL` to your domain
+
+### 🤖 AI Provider Configuration
+
+- [ ] Set `OPENAI_API_KEY` (if using OpenAI)
+- [ ] Or configured AWS Bedrock credentials (if using Bedrock)
+- [ ] Set `AI_ALLOW_STUB=false` for production
+
+### 📊 Monitoring & Analytics (Optional but Recommended)
+
+- [ ] Configured PostHog (`NEXT_PUBLIC_POSTHOG_KEY`)
+- [ ] Configured Sentry (`SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`)
+
+### 🗄️ Database & Storage
+
+- [ ] Database migrations ready (Alembic)
+- [ ] Storage configured (local or S3)
+- [ ] If using S3: AWS credentials configured
+
+### 🌐 Infrastructure
+
+- [ ] Domain DNS configured
+- [ ] SSL certificate obtained (Let's Encrypt)
+- [ ] Reverse proxy configured (Nginx/Caddy)
+- [ ] Firewall rules configured
+- [ ] Backup strategy in place
 
 ## Option 1: Docker Compose (Recommended for VPS/Self-Hosting)
 
@@ -262,38 +313,55 @@ sudo systemctl start acuvera-backend
 
 ## Nginx Configuration
 
-Create `/etc/nginx/sites-available/acuvera-backend`:
+A complete Nginx configuration example is provided in `nginx.conf.example`.
 
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
+**Quick Setup:**
 
-    client_max_body_size 10M;
+1. **Copy the example config:**
+   ```bash
+   sudo cp nginx.conf.example /etc/nginx/sites-available/acuvera
+   sudo nano /etc/nginx/sites-available/acuvera
+   # Update "your-domain.com" with your actual domain
+   ```
 
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
+2. **Enable the site:**
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/acuvera /etc/nginx/sites-enabled/
+   sudo nginx -t  # Test configuration
+   sudo systemctl reload nginx
+   ```
 
-Enable and restart:
-```bash
-sudo ln -s /etc/nginx/sites-available/acuvera-backend /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
+3. **Set up SSL (see below)**
 
 ## SSL/TLS with Let's Encrypt
 
+**Automated Setup:**
+
 ```bash
-sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d your-domain.com
+chmod +x scripts/setup-ssl.sh
+sudo ./scripts/setup-ssl.sh
 ```
+
+**Manual Setup:**
+
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Obtain certificate
+sudo certbot --nginx -d api.your-domain.com
+
+# Set up auto-renewal (usually automatic)
+sudo systemctl enable certbot.timer
+sudo systemctl start certbot.timer
+```
+
+The Nginx config example includes:
+- ✅ HTTP to HTTPS redirect
+- ✅ SSL security headers
+- ✅ File upload size limits
+- ✅ Proper proxy headers
+- ✅ Health check endpoint
 
 ## Environment Variables Checklist
 
