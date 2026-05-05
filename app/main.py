@@ -36,13 +36,33 @@ async def _keep_alive():
 
 @app.on_event("startup")
 async def on_startup():
-    """Create database tables, uploads directory, and start keep-alive task."""
-    Base.metadata.create_all(bind=engine)
+    """Create database tables, uploads directory, and start keep-alive task.
+
+    DB schema setup is non-fatal: if the database is unreachable (e.g. Render
+    DNS can't resolve the internal hostname because the DB is in a different
+    region or has been deleted/expired), we log loudly and let the API boot
+    so /health stays green. DB-dependent endpoints will surface the failure.
+    """
     try:
-        from app.core.migrate import migrate_findings_review_columns
-        migrate_findings_review_columns()
+        Base.metadata.create_all(bind=engine)
     except Exception as e:
-        print(f"[Startup] Migration skipped: {e}", flush=True)
+        print(
+            f"[Startup] DB schema init FAILED — API will start but DB-dependent "
+            f"endpoints will fail. Error: {e!r}",
+            flush=True,
+        )
+        print(
+            "[Startup] Check on Render: (1) acuvera-db exists, (2) it's in the "
+            "same region as acuvera-api, (3) DATABASE_URL env var is linked from "
+            "the database service.",
+            flush=True,
+        )
+    else:
+        try:
+            from app.core.migrate import migrate_findings_review_columns
+            migrate_findings_review_columns()
+        except Exception as e:
+            print(f"[Startup] Migration skipped: {e}", flush=True)
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     if settings.ENVIRONMENT == "production":
         asyncio.create_task(_keep_alive())
