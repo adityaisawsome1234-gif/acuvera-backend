@@ -23,6 +23,21 @@ export function formatNumber(num: number): string {
   return num.toString()
 }
 
+export function formatDate(value: string | number | Date): string {
+  const date = value instanceof Date ? value : new Date(value)
+  if (isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+export function formatPercent(value: number, fractionDigits: number = 1): string {
+  if (!Number.isFinite(value)) return '—'
+  return `${value.toFixed(fractionDigits)}%`
+}
+
 export function scrollToSection(sectionId: string) {
   const element = document.getElementById(sectionId)
   if (element) {

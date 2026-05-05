@@ -212,8 +212,8 @@ export default function AnalyticsPage() {
                         />
                         <Tooltip
                           contentStyle={tooltipStyle}
-                          formatter={(v: number | undefined) => [
-                            formatCurrency(v ?? 0),
+                          formatter={(v) => [
+                            formatCurrency(typeof v === "number" ? v : 0),
                             "Savings",
                           ]}
                         />
